@@ -1,0 +1,32 @@
+{
+  "name": "@netless/synced-store",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.es.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "vite build && yarn type-gen",
+    "type-gen": "tsc --emitDeclarationOnly",
+    "predev": "yarn type-gen",
+    "build:lib:types": "tsc --emitDeclarationOnly"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "peerDependencies": {
+    "white-web-sdk": "^2.13.16"
+  },
+  "dependencies": {
+    "eventemitter3": "^4.0.7"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^20.0.0",
+    "@rollup/plugin-node-resolve": "^13.0.4",
+    "@rollup/plugin-url": "^6.1.0",
+    "dotenv": "^10.0.0",
+    "typescript": "^4.3.5",
+    "vite": "^2.4.4",
+    "white-web-sdk": "^2.13.16"
+  }
+}
