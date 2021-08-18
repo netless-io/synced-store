@@ -24,9 +24,9 @@ sdk.joinRoom({
     });
 
     syncedStore.safeSetAttributes({ apps: { box1: { width: 100, height: 200 } }}); // 设置 apps
-    syncedStore.safeUpdateAttributes(["apps", "box1"]: { width: 200, height: 300 }); // 更新某个指定的 key
+    syncedStore.safeUpdateAttributes(["apps", "box1"], { width: 200, height: 300 }); // 更新某个指定的 key
 
     syncedStore.setAttributes({ apps: { box1: { width: 100, height: 200 } }}); // 非 safe api 会在 room 不可写的情况下报错
-    syncedStore.updateAttributes(["apps", "box1"]: { width: 200, height: 300 });
+    syncedStore.updateAttributes(["apps", "box1"], { width: 200, height: 300 });
 });
 ```
