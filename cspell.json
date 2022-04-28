@@ -1,0 +1,25 @@
+{
+  "language": "en",
+  "words": [
+    "Akko",
+    "coverallsapp",
+    "displayer",
+    "lcov",
+    "Magix",
+    "pnpm",
+    "preinstall",
+    "replayable",
+    "typedoc",
+    "unlisten",
+    "vite",
+    "vitest"
+  ],
+  "ignorePaths": [
+    "**/coverage/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "cspell.config.js",
+    "pnpm-lock.yaml",
+    "CHANGELOG.md"
+  ]
+}
