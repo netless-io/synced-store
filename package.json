@@ -1,32 +1,39 @@
 {
   "name": "@netless/synced-store",
-  "version": "0.0.1",
-  "description": "",
-  "main": "dist/index.cjs.js",
-  "module": "dist/index.es.js",
-  "types": "dist/index.d.ts",
+  "version": "1.0.0",
+  "description": "A white-web-sdk plugin for storing shared replayable states and sending/receiving replayable events.",
+  "author": "netless",
+  "license": "MIT",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.es.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "vite build && yarn type-gen",
-    "type-gen": "tsc --emitDeclarationOnly",
-    "predev": "yarn type-gen",
-    "build:lib:types": "tsc --emitDeclarationOnly"
+    "preinstall": "npx only-allow pnpm",
+    "dev": "vite",
+    "start": "vite",
+    "prepublish": "pnpm run build",
+    "lint": "eslint --ext .ts,.tsx . && prettier --check .",
+    "types": "cross-env NODE_ENV=production tsc --declaration --emitDeclarationOnly --jsx react --esModuleInterop --outDir dist",
+    "build": "vite build && npm run types",
+    "build:dev": "vite build --mode development && npm run types",
+    "release": "standard-version"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "peerDependencies": {
-    "white-web-sdk": "^2.13.16"
-  },
-  "dependencies": {
-    "eventemitter3": "^4.0.7"
+    "white-web-sdk": ">= 2.16"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^20.0.0",
-    "@rollup/plugin-node-resolve": "^13.0.4",
-    "@rollup/plugin-url": "^6.1.0",
-    "dotenv": "^10.0.0",
-    "typescript": "^4.3.5",
-    "vite": "^2.4.4",
-    "white-web-sdk": "^2.13.16"
+    "@types/lodash-es": "^4.17.6",
+    "@typescript-eslint/eslint-plugin": "^4.31.0",
+    "@typescript-eslint/parser": "^4.31.1",
+    "cross-env": "^7.0.3",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "lodash-es": "^4.17.21",
+    "prettier": "^2.4.0",
+    "side-effect-manager": "^0.1.5",
+    "standard-version": "^9.3.1",
+    "typescript": "^4.4.3",
+    "vite": "^2.5.6",
+    "white-web-sdk": "^2.16.20"
   }
 }
