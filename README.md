@@ -2,16 +2,10 @@
 
 A `white-web-sdk` plugin for storing shared replayable states and sending/receiving replayable events.
 
-### install
-
-```
-npm add @netless/synced-store
-```
-
 ### Install
 
 ```bash
-npm add @netless/app-embedded-page-sdk
+npm add @netless/synced-store
 ```
 
 ### Example
