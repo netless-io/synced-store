@@ -7,6 +7,10 @@
   "main": "./dist/synced-store.cjs.js",
   "module": "./dist/synced-store.es.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "src",
+    "dist"
+  ],
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "dev": "vite",
