@@ -22,9 +22,7 @@ export * from "./typings";
 
 export const STORAGE_NS = "_WM-STORAGE_";
 
-export class Storage<TState extends Record<string, any> = any>
-  implements Storage<TState>
-{
+export class Storage<TState extends Record<string, any> = any> {
   readonly id: string | null;
 
   private readonly _sideEffect = new SideEffectManager();
