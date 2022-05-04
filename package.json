@@ -1,6 +1,6 @@
 {
   "name": "@netless/synced-store",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A white-web-sdk plugin for storing shared replayable states and sending/receiving replayable events.",
   "author": "netless",
   "license": "MIT",

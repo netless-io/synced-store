@@ -1,0 +1,10 @@
+# Changelog
+
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+## 1.1.0 (2022-05-04)
+
+
+### Features
+
+* add new API ([#1](https://github.com/crimx/synced-store/issues/1)) ([e40bbab](https://github.com/crimx/synced-store/commit/e40bbab054c7eb9604bfddd0ce5dd8a3f8795915))
