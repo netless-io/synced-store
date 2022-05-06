@@ -3,14 +3,17 @@ import type {
   Room,
   EventListener as WhiteEventListener,
   MagixEventListenerOptions,
+  Displayer,
 } from "white-web-sdk";
-import { isRoom, InvisiblePlugin } from "white-web-sdk";
+import { isRoom as _isRoom, InvisiblePlugin } from "white-web-sdk";
 import type {
   MagixEventHandler,
   MagixEventListenerDisposer,
   MagixEventTypes,
 } from "./storage";
 import { Storage } from "./storage";
+
+const isRoom = _isRoom as (displayer: Displayer) => displayer is Room;
 
 export class SyncedStore<
   TEventData extends Record<string, any> = any
@@ -23,17 +26,23 @@ export class SyncedStore<
   }
 
   public static async init<TEventData extends Record<string, any> = any>(
-    room: Room
+    displayer: Displayer
   ): Promise<SyncedStore<TEventData>> {
-    let syncedStore = room.getInvisiblePlugin(SyncedStore.kind) as SyncedStore;
+    let syncedStore = displayer.getInvisiblePlugin(SyncedStore.kind) as
+      | SyncedStore
+      | undefined;
     if (!syncedStore) {
-      if (!room.isWritable) {
-        throw new Error("room is not writable");
+      if (isRoom(displayer)) {
+        if (!displayer.isWritable) {
+          throw new Error("room is not writable");
+        }
+        syncedStore = (await displayer.createInvisiblePlugin(
+          SyncedStore,
+          {}
+        )) as SyncedStore;
+      } else {
+        throw new Error("No SyncedStore Plugin");
       }
-      syncedStore = (await room.createInvisiblePlugin(
-        SyncedStore,
-        {}
-      )) as SyncedStore;
     }
     return syncedStore;
   }
@@ -46,7 +55,7 @@ export class SyncedStore<
   }
 
   public get isWritable(): boolean {
-    return isRoom(this.displayer) && (this.displayer as Room).isWritable;
+    return isRoom(this.displayer) && this.displayer.isWritable;
   }
 
   public addWritableChangedListener(
@@ -67,8 +76,7 @@ export class SyncedStore<
       return;
     }
 
-    const room = this.displayer as Room;
-    if (!room.isWritable) {
+    if (!this.displayer.isWritable) {
       this._logError(
         new Error(
           `SyncedStore: ${event} event can't be dispatched without writable access`
@@ -77,7 +85,7 @@ export class SyncedStore<
       return;
     }
 
-    return room.dispatchMagixEvent(event, payload);
+    return this.displayer.dispatchMagixEvent(event, payload);
   }
 
   /** Listen to events from others clients (and self messages). */
