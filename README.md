@@ -14,21 +14,21 @@ Init SyncedStore right after joining room:
 
 ```ts
 const whiteboard = new WhiteWebSdk({
-  appIdentifier: xxxxxxxxxxxxxx,
+  appIdentifier: "xxxxxxxxxxxxxx",
   useMobXState: true,
   deviceType: DeviceType.Surface,
 });
 
 const room = await whiteboard.joinRoom({
   uuid: roomUUID,
-  roomToken,
-  uid,
+  roomToken: roomToken,
+  uid: userID,
   invisiblePlugins: [SyncedStore],
 });
 
+// Define typed event keys and payloads
 type EventData = {
-  type: "click";
-  payload: { id: string };
+  click: { id: string };
 };
 
 const syncedStore = await SyncedStore.init<EventData>(room);
@@ -39,6 +39,7 @@ interface State {
   count: number;
 }
 
+// connect to a namespaced storage
 const storage = await syncedStore.connectStorage<State>("a-name", { count: 0 });
 
 storage.state; // => { count: 0 }
@@ -52,8 +53,8 @@ const stateChangedDisposer = storage.addStateChangedListener(diff => {
 });
 
 syncedStore.dispatchEvent("click", { id: "item1" });
-const eventDisposer = syncedStore.addEventListener("click", payload => {
-  console.log(payload.id);
+const eventDisposer = syncedStore.addEventListener("click", ({ payload }) => {
+  console.log(payload.id); // item1
 });
 ```
 
@@ -105,22 +106,26 @@ pnpm start
 
 - **addEventListener(event, listener)**
 
-  It fires when receiving messages from other clients (when other clients called `app.sendMessage()`).
+  It fires when receiving messages from other clients (when other clients called `syncedStore.dispatchEvent()`).
 
-  Returns: `() => void`
+  Returns: `() => void` a disposer function.
 
   ```js
-  const disposer = syncedStore.addEventListener("click", payload => {
-    console.log(payload);
+  const disposer = syncedStore.addEventListener("click", ({ payload }) => {
+    console.log(payload.data);
     disposer();
   });
+
+  syncedStore.dispatchEvent("click", { data: "data" });
   ```
 
 - **connectStorage(namespace, defaultState)**
 
-  Connect to a storage.
+  Connect to a namespaced storage.
 
   **namespace**
+
+  Name for the storage. Storages with the same namespace share the same state.
 
   Type: `string`
 
@@ -164,12 +169,7 @@ pnpm start
 
 - **storage.ensureState(partialState)**
 
-  Make sure `storage.state` has some initial values, work as if:
-
-  ```js
-  // this code won't work because storage.state is readonly
-  storage.state = { ...partialState, ...storage.state };
-  ```
+  Ensure `storage.state` has specified values.
 
   **partialState**
 
@@ -190,10 +190,10 @@ pnpm start
   ```js
   const disposer = storage.addStateChangedListener(diff => {
     console.log("state changed", diff.oldValue, diff.newValue);
-    disposer();
+    disposer(); // remove listener by calling disposer
   });
   ```
 
-### Licence
+### License
 
 MIT @ [netless](https://github.com/netless-io)
