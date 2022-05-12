@@ -58,6 +58,16 @@ export class SyncedStore<
     return isRoom(this.displayer) && this.displayer.isWritable;
   }
 
+  public async setWritable(isWritable: boolean): Promise<void> {
+    if (isRoom(this.displayer)) {
+      await this.displayer.setWritable(isWritable);
+    } else {
+      this._logError(
+        new Error(`SyncedStore: cannot set writable on replay mode`)
+      );
+    }
+  }
+
   public addWritableChangedListener(
     listener: (isWritable: boolean) => void
   ): () => void {
