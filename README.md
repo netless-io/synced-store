@@ -24,6 +24,9 @@ const room = await whiteboard.joinRoom({
   roomToken: roomToken,
   uid: userID,
   invisiblePlugins: [SyncedStore],
+  // Only writable users can modify states and dispatch events.
+  // Set this to false for readonly users(audience) for better performance
+  isWritable: true,
 });
 
 // Define typed event keys and payloads
@@ -43,7 +46,11 @@ interface State {
 const storage = await syncedStore.connectStorage<State>("a-name", { count: 0 });
 
 storage.state; // => { count: 0 }
-storage.setState({ count: 2 });
+
+if (syncedStore.isWritable) {
+  storage.setState({ count: 2 });
+}
+
 const stateChangedDisposer = storage.addStateChangedListener(diff => {
   if (diff.count) {
     // count: 0 -> 2
@@ -52,7 +59,10 @@ const stateChangedDisposer = storage.addStateChangedListener(diff => {
   }
 });
 
-syncedStore.dispatchEvent("click", { id: "item1" });
+if (syncStore.isWritable) {
+  syncedStore.dispatchEvent("click", { id: "item1" });
+}
+
 const eventDisposer = syncedStore.addEventListener("click", ({ payload }) => {
   console.log(payload.id); // item1
 });
@@ -79,7 +89,15 @@ pnpm start
 
   Type: `boolean`
 
-  When it is `false`, calling `storage.setState()` and `dispatchEvent()` has no effect.
+  Shortcut to whiteboard room writable state. When it is `false`, calling `storage.setState()` and `dispatchEvent()` has no effect.
+
+- **setWritable(isWritable)**
+
+  Shortcut to change whiteboard room writable state.
+
+  **isWritable**
+
+  Type: `boolean`
 
 - **addWritableChangedListener(listener)**
 
