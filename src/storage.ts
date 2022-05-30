@@ -22,6 +22,8 @@ export * from "./typings";
 
 export const STORAGE_NS = "_WM-STORAGE_";
 
+export const MAIN_STORAGE = "_WM-MAIN-STORAGE_";
+
 export class Storage<TState extends Record<string, any> = any> {
   readonly id: string | null;
 
@@ -50,7 +52,7 @@ export class Storage<TState extends Record<string, any> = any> {
     }
 
     this._context = context;
-    this.id = id || null;
+    this.id = typeof id === "undefined" ? MAIN_STORAGE : id;
 
     this._state = {} as TState;
 
@@ -59,15 +61,21 @@ export class Storage<TState extends Record<string, any> = any> {
         ? this._context.attributes ?? this._state
         : get(this._context.attributes, [STORAGE_NS, this.id], this._state);
 
-    if (this.id !== null && this.isWritable) {
-      if (rawState === this._state || !isObject(rawState)) {
-        if (!get(this._context.attributes, [STORAGE_NS])) {
-          this._context.updateAttributes([STORAGE_NS], {});
+    if (this.isWritable) {
+      if (this.id === null) {
+        if (defaultState) {
+          this.ensureState(defaultState);
         }
-        this._context.updateAttributes([STORAGE_NS, this.id], this._state);
-      }
-      if (defaultState) {
-        this.setState(defaultState);
+      } else {
+        if (rawState === this._state || !isObject(rawState)) {
+          if (!get(this._context.attributes, [STORAGE_NS])) {
+            this._context.updateAttributes([STORAGE_NS], {});
+          }
+          this._context.updateAttributes([STORAGE_NS, this.id], this._state);
+          if (defaultState) {
+            this.setState(defaultState);
+          }
+        }
       }
     }
 
