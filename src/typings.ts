@@ -34,7 +34,7 @@ export type StorageStateChangedListenerDisposer = () => void;
 export interface MagixEventMessage<
   TEventData = any,
   TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
-> extends Omit<WheelEvent, "scope" | "phase"> {
+> {
   /** Event name */
   event: TEvent;
   /** Event Payload */
