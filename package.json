@@ -27,17 +27,17 @@
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.6",
-    "@typescript-eslint/eslint-plugin": "^4.31.0",
-    "@typescript-eslint/parser": "^4.31.1",
+    "@typescript-eslint/eslint-plugin": "^5.27.1",
+    "@typescript-eslint/parser": "^5.27.1",
     "cross-env": "^7.0.3",
-    "eslint": "^7.32.0",
-    "eslint-config-prettier": "^8.3.0",
+    "eslint": "^8.17.0",
+    "eslint-config-prettier": "^8.5.0",
     "lodash-es": "^4.17.21",
-    "prettier": "^2.4.0",
-    "side-effect-manager": "^0.1.5",
-    "standard-version": "^9.3.1",
-    "typescript": "^4.4.3",
-    "vite": "^2.5.6",
-    "white-web-sdk": "^2.16.20"
+    "prettier": "^2.6.2",
+    "side-effect-manager": "^1.1.0",
+    "standard-version": "^9.5.0",
+    "typescript": "^4.7.3",
+    "vite": "^2.9.10",
+    "white-web-sdk": "^2.16.24"
   }
 }
