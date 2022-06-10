@@ -25,7 +25,7 @@ export const STORAGE_NS = "_WM-STORAGE_";
 export const MAIN_STORAGE = "_WM-MAIN-STORAGE_";
 
 export class Storage<TState extends Record<string, any> = any> {
-  readonly id: string | null;
+  readonly id: string;
 
   private readonly _sideEffect = new SideEffectManager();
   private _context: SyncedStore;
@@ -52,36 +52,31 @@ export class Storage<TState extends Record<string, any> = any> {
     }
 
     this._context = context;
-    this.id = typeof id === "undefined" ? MAIN_STORAGE : id;
+    this.id = id || MAIN_STORAGE;
 
     this._state = {} as TState;
 
-    const rawState: TState =
-      this.id === null
-        ? this._context.attributes ?? this._state
-        : get(this._context.attributes, [STORAGE_NS, this.id], this._state);
+    const rawState: TState = get(
+      this._context.attributes,
+      [STORAGE_NS, this.id],
+      this._state
+    );
 
     if (this.isWritable) {
-      if (this.id === null) {
-        if (defaultState) {
-          this.ensureState(defaultState);
+      if (rawState === this._state || !isObject(rawState)) {
+        if (!get(this._context.attributes, [STORAGE_NS])) {
+          this._context.updateAttributes([STORAGE_NS], {});
         }
-      } else {
-        if (rawState === this._state || !isObject(rawState)) {
-          if (!get(this._context.attributes, [STORAGE_NS])) {
-            this._context.updateAttributes([STORAGE_NS], {});
-          }
-          this._context.updateAttributes([STORAGE_NS, this.id], this._state);
-          if (defaultState) {
-            this.setState(defaultState);
-          }
+        this._context.updateAttributes([STORAGE_NS, this.id], this._state);
+        if (defaultState) {
+          this.setState(defaultState);
         }
       }
     }
 
     // strip mobx
     plainObjectKeys(rawState).forEach(key => {
-      if (this.id === null && key === STORAGE_NS) {
+      if (key === STORAGE_NS) {
         return;
       }
       try {
@@ -121,7 +116,7 @@ export class Storage<TState extends Record<string, any> = any> {
             const action = actions[i];
             const key = action.key as Extract<keyof TState, string>;
 
-            if (this.id === null && key === STORAGE_NS) {
+            if (key === STORAGE_NS) {
               continue;
             }
 
@@ -183,10 +178,7 @@ export class Storage<TState extends Record<string, any> = any> {
 
     this._sideEffect.addDisposer(
       safeListenPropsUpdated(
-        () =>
-          this.id === null
-            ? context.attributes
-            : get(context.attributes, [STORAGE_NS, this.id]),
+        () => get(context.attributes, [STORAGE_NS, this.id]),
         _updateProperties,
         this.destroy.bind(this)
       )
@@ -271,16 +263,7 @@ export class Storage<TState extends Record<string, any> = any> {
           }
         }
 
-        if (this.id === null) {
-          if (key === STORAGE_NS) {
-            throw new Error(
-              `Cannot set attribute on internal field "${STORAGE_NS}"`
-            );
-          }
-          this._context.updateAttributes([key], payload);
-        } else {
-          this._context.updateAttributes([STORAGE_NS, this.id, key], payload);
-        }
+        this._context.updateAttributes([STORAGE_NS, this.id, key], payload);
       });
     }
   }
@@ -314,10 +297,6 @@ export class Storage<TState extends Record<string, any> = any> {
    * Delete storage index with all of its data and destroy the Storage instance.
    */
   public deleteStorage(): void {
-    if (this.id === null) {
-      throw new Error(`Cannot delete main Storage`);
-    }
-
     if (!this._context.attributes) {
       this._context._logError(
         new Error(`Cannot delete Storage "${this.id}" without writable access.`)
