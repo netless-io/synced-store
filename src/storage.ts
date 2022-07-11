@@ -1,9 +1,15 @@
 import type { ReadonlyVal } from "value-enhancer";
-import type { InvisiblePlugin } from "white-web-sdk";
-import { toJS } from "white-web-sdk";
+import type { AkkoObjectUpdatedListener, InvisiblePlugin } from "white-web-sdk";
+import {
+  listenUpdated,
+  reaction,
+  RoomPhase,
+  unlistenUpdated,
+  toJS,
+} from "white-web-sdk";
 import type { Diff, StorageStateChangedEvent } from "./typings";
 import { StorageEvent } from "./storage-event";
-import { isObject, plainObjectKeys, safeListenPropsUpdated } from "./utils";
+import { isObject, plainObjectKeys } from "./utils";
 import type { RefineState } from "./refine";
 import { Refine } from "./refine";
 import type { SideEffectDisposer } from "side-effect-manager";
@@ -41,13 +47,13 @@ export class Storage<TState> {
     }
 
     const getRawState = (): RefineState<TState> =>
-      toJS(plugin$.value?.attributes[STORAGE_NS]?.[namespace]);
+      plugin$.value?.attributes[STORAGE_NS]?.[namespace];
 
     this.namespace = namespace;
     this.defaultState = defaultState;
     this._plugin$ = plugin$;
     this._isWritable$ = isWritable$;
-    this._refine = new Refine(getRawState(), defaultState);
+    this._refine = new Refine(toJS(getRawState()), defaultState);
 
     const onDiff = (diff: Diff<TState> | null): void => {
       if (diff) {
@@ -63,7 +69,7 @@ export class Storage<TState> {
           if (!isObject(plugin.attributes[STORAGE_NS])) {
             plugin.updateAttributes([STORAGE_NS], {});
           }
-          if (!isObject(getRawState())) {
+          if (!isObject(toJS(getRawState()))) {
             plugin.updateAttributes(
               [STORAGE_NS, namespace],
               this._refine.toRefState()
@@ -73,34 +79,72 @@ export class Storage<TState> {
       });
     };
 
+    const listenNamespaceProps = (
+      rawState: RefineState<TState>
+    ): SideEffectDisposer => {
+      const handler: AkkoObjectUpdatedListener<TState> = actions => {
+        if (actions.length <= 0) return;
+        const diff = {} as Diff<TState>;
+        let hasDiff = false;
+        for (let i = 0; i < actions.length; i++) {
+          const action = actions[i];
+          const key = action.key as Extract<keyof TState, string>;
+          if (key === STORAGE_NS) {
+            continue;
+          }
+
+          const value = toJS(action.value);
+          const diffOne = this._refine.setValue(key, value);
+          if (diffOne) {
+            hasDiff = true;
+            diff[key] = diffOne;
+          }
+        }
+        if (hasDiff) {
+          onDiff(diff);
+        }
+      };
+      listenUpdated(rawState, handler);
+      return () => unlistenUpdated(rawState, handler);
+    };
+
+    const listenNamespace = (): SideEffectDisposer => {
+      let propsDisposer: SideEffectDisposer | undefined;
+      const reactionDisposer = reaction(
+        getRawState,
+        () => {
+          const rawState = getRawState();
+          if (rawState) {
+            this._refine.replaceState(toJS(rawState));
+            propsDisposer?.();
+            propsDisposer = listenNamespaceProps(rawState);
+          }
+        },
+        { fireImmediately: true }
+      );
+      return () => {
+        reactionDisposer();
+        propsDisposer?.();
+      };
+    };
+
     const listenStorageChange = (
       plugin: InvisiblePlugin<any>
     ): SideEffectDisposer => {
-      return safeListenPropsUpdated(
-        () => plugin.attributes[STORAGE_NS]?.[namespace],
-        actions => {
-          if (actions.length <= 0) return;
-          const diff = {} as Diff<TState>;
-          let hasDiff = false;
-          for (let i = 0; i < actions.length; i++) {
-            const action = actions[i];
-            const key = action.key as Extract<keyof TState, string>;
-            if (key === STORAGE_NS) {
-              continue;
-            }
+      let disposer = listenNamespace();
 
-            const value = toJS(action.value);
-            const diffOne = this._refine.setValue(key, value);
-            if (diffOne) {
-              hasDiff = true;
-              diff[key] = diffOne;
-            }
-          }
-          if (hasDiff) {
-            onDiff(diff);
-          }
+      const handler = async (phase: RoomPhase): Promise<void> => {
+        if (phase === RoomPhase.Connected) {
+          disposer();
+          disposer = listenNamespace();
         }
-      );
+      };
+      plugin.displayer.callbacks.on("onPhaseChanged", handler);
+
+      return () => {
+        plugin.displayer.callbacks.off("onPhaseChanged", handler);
+        disposer();
+      };
     };
 
     this._sideEffect.addDisposer(
@@ -108,7 +152,7 @@ export class Storage<TState> {
         const disposers: SideEffectDisposer[] = [];
         this._sideEffect.flush("plugin-init");
         if (plugin) {
-          const rawState = getRawState();
+          const rawState = toJS(getRawState());
           if (isObject(rawState)) {
             onDiff(this._refine.replaceState(rawState));
           } else {
