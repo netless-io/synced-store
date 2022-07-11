@@ -17,7 +17,7 @@ import { SyncedStorePlugin } from "@netless/synced-store";
 
 const whiteboard = new WhiteWebSdk({
   appIdentifier: "xxxxxxxxxxxxxx",
-  useMobXState: true,
+  useMobXState: true, // This is required to use SyncedStorePlugin
   deviceType: DeviceType.Surface,
 });
 
@@ -49,11 +49,11 @@ const storage = await syncedStore.connectStorage<State>("a-name", { count: 0 });
 
 storage.state; // => { count: 0 }
 
-if (syncedStore.isWritable) {
+if (storage.isWritable) {
   storage.setState({ count: 2 });
 }
 
-const stateChangedDisposer = storage.addStateChangedListener(diff => {
+const stateChangedDisposer = storage.on("stateChanged", diff => {
   if (diff.count) {
     // count: 0 -> 2
     console.log("count:", diff.count.oldValue, "->", diff.count.newValue);
@@ -61,13 +61,16 @@ const stateChangedDisposer = storage.addStateChangedListener(diff => {
   }
 });
 
-if (syncStore.isWritable) {
-  syncedStore.dispatchEvent("click", { id: "item1" });
+if (syncStore.isRoomWritable) {
+  syncedStore.dispatchEvent("click-event", { id: "item1" });
 }
 
-const eventDisposer = syncedStore.addEventListener("click", ({ payload }) => {
-  console.log(payload.id); // item1
-});
+const eventDisposer = syncedStore.addEventListener(
+  "click-event",
+  ({ payload }) => {
+    console.log(payload.id); // item1
+  }
+);
 ```
 
 ### Develop
@@ -101,7 +104,7 @@ pnpm start
 
   It fires when whiteboard room writable state changes.
 
-  Type: `(isWritable: boolean) => void`
+  Type: `(isRoomWritable: boolean) => void`
 
   Returns: `() => void` - a disposable function that can be called to remove the listener.
 
@@ -109,13 +112,13 @@ pnpm start
 
   Type: `boolean`
 
-  It is `true` if `isRoomWritable === true` and plugin finished initialization. When it is `false`, calling `storage.setState()` and `dispatchEvent()` will throw errors.
+  It is `true` if `isRoomWritable === true` and plugin finished initialization. When it is `false`, calling `storage.setState()` will throw errors.
 
 - **SyncedStore.addPluginWritableChangeListener(listener)**
 
   It fires when plugin writable state changes.
 
-  Type: `(isWritable: boolean) => void`
+  Type: `(isPluginWritable: boolean) => void`
 
   Returns: `() => void` - a disposable function that can be called to remove the listener.
 
@@ -134,21 +137,24 @@ pnpm start
   Returns: `() => void` a disposer function.
 
   ```js
-  const disposer = syncedStore.addEventListener("click", ({ payload }) => {
-    console.log(payload.data);
-    disposer();
-  });
+  const disposer = syncedStore.addEventListener(
+    "click-event",
+    ({ payload }) => {
+      console.log(payload.data);
+      disposer();
+    }
+  );
 
-  syncedStore.dispatchEvent("click", { data: "data" });
+  syncedStore.dispatchEvent("click-event", { data: "data" });
   ```
 
 - **SyncedStore.connectStorage(namespace, defaultState)**
 
-  Connect to a namespaced storage.
+  Connect to a namespaced storage. Each call returns an fresh storage instance with its own life-cycle. Calling multiple times with same namespace will result in different storage instances sharing the same data.
 
   **namespace**
 
-  Name for the storage. Storages with the same namespace share the same state.
+  Name for the storage. Storages with the same namespace share the same state(but each storage instance keeps it own life-cycle).
 
   Type: `string`
 
@@ -191,30 +197,28 @@ pnpm start
   storage.state; //=> { count: 1, b: 2 }
   ```
 
-- **Storage.ensureState(partialState)**
+- **Storage.on("stateChanged", listener)**
 
-  Ensure `storage.state` has specified values.
+  A state changed event that fires after someone called `storage.setState()` (including the current syncedStore itself).
 
-  **partialState**
-
-  Type: `Partial<State>`
+  Returns: `() => void` - A disposable function that can be called to remove the listener.
 
   ```js
-  storage.state; // { a: 1 }
-  storage.ensureState({ a: 0, b: 0 });
-  storage.state; // { a: 1, b: 0 }
-  ```
-
-- **Storage.addStateChangedListener(listener)**
-
-  It fires after someone called `storage.setState()` (including the current syncedStore itself).
-
-  Returns: `() => void`
-
-  ```js
-  const disposer = storage.addStateChangedListener(diff => {
+  const disposer = storage.on("stateChanged", diff => {
     console.log("state changed", diff.oldValue, diff.newValue);
     disposer(); // remove listener by calling disposer
+  });
+  ```
+
+- **Storage.on("destroyed", listener)**
+
+  An event that fires after the storage instance is destroyed.
+
+  Returns: `() => void` - A disposable function that can be called to remove the listener.
+
+  ```js
+  const disposer = storage.on("destroyed", () => {
+    console.log(storage.destroyed); // true
   });
   ```
 
