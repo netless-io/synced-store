@@ -60,12 +60,22 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
     namespace?: string,
     defaultState?: TState
   ): Storage<TState> {
-    return new Storage({
+    const storage = new Storage({
       plugin$: this.plugin$,
       isWritable$: this._isPluginWritable$,
       namespace,
       defaultState,
     });
+    const destroyDisposerID = this._sideEffect.addDisposer(() =>
+      storage.destroy()
+    );
+    const disposerID = this._sideEffect.addDisposer(
+      storage.on("destroyed", () => {
+        this._sideEffect.remove(destroyDisposerID);
+        this._sideEffect.flush(disposerID);
+      })
+    );
+    return storage;
   }
 
   get room(): Room | null {

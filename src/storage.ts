@@ -7,17 +7,22 @@ import {
   unlistenUpdated,
   toJS,
 } from "white-web-sdk";
-import type { Diff, StorageStateChangedEvent } from "./typings";
-import { StorageEvent } from "./storage-event";
+import type { Diff } from "./typings";
 import { isObject, plainObjectKeys } from "./utils";
 import type { RefineState } from "./refine";
 import { Refine } from "./refine";
 import type { SideEffectDisposer } from "side-effect-manager";
 import { SideEffectManager } from "side-effect-manager";
+import { Remitter } from "remitter";
 
 export const STORAGE_NS = "_WM-StOrAgE_";
 
 export const MAIN_STORAGE = "_WM-MaIn-StOrAgE_";
+
+export interface StorageEventData<TState = any> {
+  stateChanged: Diff<TState>;
+  destroyed: void;
+}
 
 export interface StorageConfig<TState = any> {
   namespace?: string;
@@ -26,7 +31,9 @@ export interface StorageConfig<TState = any> {
   defaultState?: TState;
 }
 
-export class Storage<TState> {
+export class Storage<TState extends Record<string, any> = any> extends Remitter<
+  StorageEventData<TState>
+> {
   public readonly namespace: string;
   public defaultState: Readonly<TState>;
   private _plugin$: StorageConfig["plugin$"];
@@ -40,6 +47,8 @@ export class Storage<TState> {
     namespace = MAIN_STORAGE,
     defaultState = {} as TState,
   }: StorageConfig<TState>) {
+    super();
+
     if (defaultState && !isObject(defaultState)) {
       throw new Error(
         `Default state for Storage ${namespace} is not an object.`
@@ -57,7 +66,7 @@ export class Storage<TState> {
 
     const onDiff = (diff: Diff<TState> | null): void => {
       if (diff) {
-        this.onStateChanged.dispatch(diff);
+        this.emit("stateChanged", diff);
       }
     };
 
@@ -177,10 +186,6 @@ export class Storage<TState> {
     return this._refine.state;
   }
 
-  public readonly onStateChanged = new StorageEvent<
-    StorageStateChangedEvent<TState>
-  >();
-
   public setState(state: Partial<TState>): void {
     const plugin = this._requireAccess("setState");
 
@@ -207,10 +212,11 @@ export class Storage<TState> {
     plugin.updateAttributes([STORAGE_NS, this.namespace], this.defaultState);
   }
 
-  public destroy(): void {
+  public override destroy(): void {
     this._destroyed = true;
-    this.onStateChanged.listeners.clear();
     this._sideEffect.flushAll();
+    this.emit("destroyed");
+    super.destroy();
   }
 
   public get destroyed(): boolean {

@@ -9,6 +9,7 @@ specifiers:
   eslint-config-prettier: ^8.5.0
   lodash-es: ^4.17.21
   prettier: ^2.6.2
+  remitter: ^0.2.5
   rollup-plugin-exclude-dependencies-from-bundle: ^1.1.22
   side-effect-manager: ^1.1.1
   standard-version: ^9.5.0
@@ -19,6 +20,7 @@ specifiers:
 
 dependencies:
   lodash-es: 4.17.21
+  remitter: 0.2.5
   side-effect-manager: 1.1.1
   value-enhancer: 1.3.0
 
@@ -204,9 +206,7 @@ packages:
     resolution: {integrity: sha512-WFfdLWU/xVWKeRQnKmIAQULUI7Il0gZnBIH/ZFO069wYIfPu+8zrfp/KMW0atmELoRDq8FbiP3VCss9MhCut7Q==}
     engines: {node: '>= 10.0.0'}
     peerDependencies:
-      '@babel/core': ^7.0.0
       '@types/babel__core': ^7.1.9
-      rollup: ^1.20.0||^2.0.0
     peerDependenciesMeta:
       '@types/babel__core':
         optional: true
@@ -218,8 +218,6 @@ packages:
   /@rollup/plugin-node-resolve/13.3.0:
     resolution: {integrity: sha512-Lus8rbUo1eEcnS4yTFKLZrVumLPY+YayBdWXgFSHYhTT2iJbMhoaaBL3xl5NCdeRytErGr8tZ0L71BMRmnlwSw==}
     engines: {node: '>= 10.0.0'}
-    peerDependencies:
-      rollup: ^2.42.0
     dependencies:
       '@rollup/pluginutils': 3.1.0
       '@types/resolve': 1.17.1
@@ -232,8 +230,6 @@ packages:
   /@rollup/pluginutils/3.1.0:
     resolution: {integrity: sha512-GksZ6pr6TpIjHm8h9lSQ8pi8BE9VeubNT0OMJ3B5uZJ8pz73NPiqOtCog/x2/QzM1ENChPKxMDhiQuRHsqc+lg==}
     engines: {node: '>= 8.0.0'}
-    peerDependencies:
-      rollup: ^1.20.0||^2.0.0
     dependencies:
       '@types/estree': 0.0.39
       estree-walker: 1.0.1
@@ -2271,6 +2267,10 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
+  /remitter/0.2.5:
+    resolution: {integrity: sha512-dwKmTDG9Vzty5eBWQmH7X+RJVETUZD6VzdjrDkk5VJngKmoIs8N5pKQsatYoNJc0ZTiJ8AC3eFkMpJZJPcMGog==}
+    dev: false
+
   /require-directory/2.1.1:
     resolution: {integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==}
     engines: {node: '>=0.10.0'}
@@ -2308,13 +2308,10 @@ packages:
 
   /rollup-plugin-exclude-dependencies-from-bundle/1.1.22:
     resolution: {integrity: sha512-MV+3dpnQYilq6czsui0eJjDZEZIDORc5cBxOZ8Dm7XPjOaygAc+4AGZDC3qn4g9p13vYc0XRQ2T8JFdUmSQvXw==}
-    peerDependencies:
-      rollup: '*'
     dependencies:
       '@rollup/plugin-babel': 5.3.1
       '@rollup/plugin-node-resolve': 13.3.0
     transitivePeerDependencies:
-      - '@babel/core'
       - '@types/babel__core'
     dev: true
 

@@ -1,6 +1,3 @@
-import { listenUpdated, unlistenUpdated, reaction } from "white-web-sdk";
-import type { AkkoObjectUpdatedListener } from "white-web-sdk";
-
 declare module "white-web-sdk" {
   export function isRoom(displayer: Displayer): displayer is Room;
 }
@@ -31,34 +28,4 @@ export const plainObjectKeys = Object.keys as <T>(
 
 export const toJS = <O>(obj: O): O => {
   return isObject(obj) ? JSON.parse(JSON.stringify(obj)) : obj;
-};
-
-export const safeListenPropsUpdated = <T>(
-  getProps: () => T,
-  callback: AkkoObjectUpdatedListener<T>,
-  onDestroyed?: (props: unknown) => void
-): (() => void) => {
-  let disposeListenUpdated: (() => void) | null = null;
-  const disposeReaction = reaction(
-    getProps,
-    () => {
-      if (disposeListenUpdated) {
-        disposeListenUpdated();
-        disposeListenUpdated = null;
-      }
-      const props = getProps();
-      if (isObject(props)) {
-        disposeListenUpdated = () => unlistenUpdated(props, callback);
-        listenUpdated(props, callback);
-      } else {
-        onDestroyed?.(props);
-      }
-    },
-    { fireImmediately: true }
-  );
-
-  return () => {
-    disposeListenUpdated?.();
-    disposeReaction();
-  };
 };
