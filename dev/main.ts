@@ -1,7 +1,7 @@
 import type { Room } from "white-web-sdk";
 import { DeviceType, WhiteWebSdk } from "white-web-sdk";
 import { genUID } from "side-effect-manager";
-import { SyncedStore } from "../src";
+import { SyncedStorePlugin } from "../src";
 
 const whiteboard = new WhiteWebSdk({
   appIdentifier: import.meta.env.VITE_WHITEBOARD_ID,
@@ -20,7 +20,7 @@ async function main(): Promise<void> {
     : createRoom());
   (window as any).room = room;
 
-  const syncedStore = await SyncedStore.init(room);
+  const syncedStore = await SyncedStorePlugin.init(room);
   (window as any).syncedStore = syncedStore;
 
   const mainStorage = syncedStore.connectStorage<{
@@ -58,7 +58,7 @@ async function joinRoom(roomUUID: string, roomToken: string): Promise<Room> {
     uuid: roomUUID,
     roomToken,
     uid,
-    invisiblePlugins: [SyncedStore],
+    invisiblePlugins: [SyncedStorePlugin],
     disableMagixEventDispatchLimit: true,
     userPayload: {
       uid,

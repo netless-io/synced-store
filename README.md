@@ -13,6 +13,8 @@ npm add @netless/synced-store
 Init SyncedStore right after joining room:
 
 ```ts
+import { SyncedStorePlugin } from "@netless/synced-store";
+
 const whiteboard = new WhiteWebSdk({
   appIdentifier: "xxxxxxxxxxxxxx",
   useMobXState: true,
@@ -23,7 +25,7 @@ const room = await whiteboard.joinRoom({
   uuid: roomUUID,
   roomToken: roomToken,
   uid: userID,
-  invisiblePlugins: [SyncedStore],
+  invisiblePlugins: [SyncedStorePlugin],
   // Only writable users can modify states and dispatch events.
   // Set this to false for readonly users(audience) for better performance
   isWritable: true,
@@ -34,7 +36,7 @@ type EventData = {
   click: { id: string };
 };
 
-const syncedStore = await SyncedStore.init<EventData>(room);
+const syncedStore = await SyncedStorePlugin.init<EventData>(room);
 ```
 
 ```ts
@@ -79,42 +81,45 @@ pnpm start
 
 ### API
 
-- **SyncedStore.init(room)**
+- **static SyncedStorePlugin.init(room)**
 
-  A static method that inits the SyncedStore. Should be called right after joining room.
+  A `static` method that inits the SyncedStore. Should be called right after joining room.
 
   Returns: `Promise<SyncedStore<EventData>>`
 
-- **isWritable**
+- **SyncedStore.isRoomWritable**
 
   Type: `boolean`
 
-  Shortcut to whiteboard room writable state. When it is `false`, calling `storage.setState()` and `dispatchEvent()` has no effect.
+  Shortcut to whiteboard room writable state. When it is `false`, calling `storage.setState()` and `dispatchEvent()` will throw errors.
 
-- **setWritable(isWritable)**
+- **SyncedStore.setRoomWritable(isWritable)**
 
   Shortcut to change whiteboard room writable state.
 
-  **isWritable**
+- **SyncedStore.addRoomWritableChangeListener(listener)**
 
-  Type: `boolean`
-
-- **addWritableChangedListener(listener)**
-
-  It fires when app writable state changes.
+  It fires when whiteboard room writable state changes.
 
   Type: `(isWritable: boolean) => void`
 
-  Returns: `() => void`
+  Returns: `() => void` - a disposable function that can be called to remove the listener.
 
-  ```js
-  const disposer = syncedStore.addWritableChangedListener(isWritable => {
-    console.log("my writable becomes", isWritable);
-    disposer();
-  });
-  ```
+- **SyncedStore.isPluginWritable**
 
-- **dispatchEvent(event, payload)**
+  Type: `boolean`
+
+  It is `true` if `isRoomWritable === true` and plugin finished initialization. When it is `false`, calling `storage.setState()` and `dispatchEvent()` will throw errors.
+
+- **SyncedStore.addPluginWritableChangeListener(listener)**
+
+  It fires when plugin writable state changes.
+
+  Type: `(isWritable: boolean) => void`
+
+  Returns: `() => void` - a disposable function that can be called to remove the listener.
+
+- **SyncedStore.dispatchEvent(event, payload)**
 
   Broadcast an event message to other clients.
 
@@ -122,7 +127,7 @@ pnpm start
   syncedStore.dispatchEvent("click", { data: "data" });
   ```
 
-- **addEventListener(event, listener)**
+- **SyncedStore.addEventListener(event, listener)**
 
   It fires when receiving messages from other clients (when other clients called `syncedStore.dispatchEvent()`).
 
@@ -137,7 +142,7 @@ pnpm start
   syncedStore.dispatchEvent("click", { data: "data" });
   ```
 
-- **connectStorage(namespace, defaultState)**
+- **SyncedStore.connectStorage(namespace, defaultState)**
 
   Connect to a namespaced storage.
 
@@ -157,14 +162,15 @@ pnpm start
   const storage = syncedStore.connectStorage("my-storage", { count: 0 });
   ```
 
-- **storage.state**
+- **Storage.state**
 
-  Type: `State`\
+  Type: `State`
+
   Default: `initialState`
 
   The synchronized state across all clients. To change it, call `storage.setState()`.
 
-- **storage.setState(partialState)**
+- **Storage.setState(partialState)**
 
   Works like React's `setState`, it updates `storage.state` and synchronize it to other clients.
 
@@ -185,7 +191,7 @@ pnpm start
   storage.state; //=> { count: 1, b: 2 }
   ```
 
-- **storage.ensureState(partialState)**
+- **Storage.ensureState(partialState)**
 
   Ensure `storage.state` has specified values.
 
@@ -199,7 +205,7 @@ pnpm start
   storage.state; // { a: 1, b: 0 }
   ```
 
-- **storage.addStateChangedListener(listener)**
+- **Storage.addStateChangedListener(listener)**
 
   It fires after someone called `storage.setState()` (including the current syncedStore itself).
 

@@ -2,6 +2,7 @@
 
 import path from "path";
 import { defineConfig } from "vite";
+import excludeDependenciesFromBundle from "rollup-plugin-exclude-dependencies-from-bundle";
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === "production";
@@ -17,7 +18,8 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         external: ["white-web-sdk"],
       },
-      minify: isProd,
+      minify: false,
     },
+    plugins: [excludeDependenciesFromBundle()],
   };
 });

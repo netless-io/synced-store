@@ -1,101 +1,114 @@
+import { SideEffectManager } from "side-effect-manager";
+import type { ReadonlyVal } from "value-enhancer";
+import { combine, Val } from "value-enhancer";
 import type {
-  InvisiblePluginContext,
   Room,
   EventListener as WhiteEventListener,
   MagixEventListenerOptions,
   Displayer,
+  InvisiblePlugin,
 } from "white-web-sdk";
-import { isRoom as _isRoom, InvisiblePlugin } from "white-web-sdk";
+import { isRoom } from "white-web-sdk";
+import { Storage } from "./storage";
 import type {
+  MagixEventTypes,
   MagixEventHandler,
   MagixEventListenerDisposer,
-  MagixEventTypes,
-} from "./storage";
-import { Storage } from "./storage";
+} from "./typings";
 
-const isRoom = _isRoom as (displayer: Displayer) => displayer is Room;
+export class SyncedStore<TEventData extends Record<string, any> = any> {
+  public readonly displayer: Displayer;
+  public readonly plugin$: Val<InvisiblePlugin<any> | null>;
 
-export class SyncedStore<
-  TEventData extends Record<string, any> = any
-> extends InvisiblePlugin<any> {
-  public static kind = "SyncedStore";
-  public errorLog = true;
+  private readonly _isPluginWritable$: ReadonlyVal<boolean>;
+  private readonly _isRoomWritable$ = new Val(false);
+  private readonly _sideEffect = new SideEffectManager();
+  private _room: Room | null;
 
-  public constructor(context: InvisiblePluginContext) {
-    super(context);
-  }
+  public constructor(
+    displayer: Displayer,
+    invisiblePlugin$: Val<InvisiblePlugin<any> | null>
+  ) {
+    this.displayer = displayer;
+    this._room = null;
+    this.plugin$ = invisiblePlugin$;
 
-  public static async init<TEventData extends Record<string, any> = any>(
-    displayer: Displayer
-  ): Promise<SyncedStore<TEventData>> {
-    let syncedStore = displayer.getInvisiblePlugin(SyncedStore.kind) as
-      | SyncedStore
-      | undefined;
-    if (!syncedStore) {
-      if (isRoom(displayer)) {
-        if (!displayer.isWritable) {
-          throw new Error("room is not writable");
-        }
-        syncedStore = (await displayer.createInvisiblePlugin(
-          SyncedStore,
-          {}
-        )) as SyncedStore;
-      } else {
-        throw new Error("No SyncedStore Plugin");
-      }
-    }
-    return syncedStore;
+    this._sideEffect.add(() => {
+      const update = () =>
+        this._isRoomWritable$.setValue(
+          isRoom(this.displayer) && Boolean(this.displayer.isWritable)
+        );
+      update();
+      this.displayer.callbacks.on("onEnableWriteNowChanged", update);
+      return () =>
+        this.displayer.callbacks.off("onEnableWriteNowChanged", update);
+    });
+
+    this._isPluginWritable$ = combine(
+      [this.plugin$, this._isRoomWritable$],
+      ([plugin, isRoomWritable]) => plugin !== null && isRoomWritable
+    );
+
+    this._sideEffect.addDisposer(
+      this._isRoomWritable$.subscribe(isRoomWritable => {
+        this._room = isRoomWritable && isRoom(displayer) ? displayer : null;
+      })
+    );
   }
 
   public connectStorage<TState extends Record<string, unknown> = any>(
-    storageID: string | null | undefined = null,
+    namespace?: string,
     defaultState?: TState
   ): Storage<TState> {
-    return new Storage(this, storageID, defaultState);
+    return new Storage({
+      plugin$: this.plugin$,
+      isWritable$: this._isPluginWritable$,
+      namespace,
+      defaultState,
+    });
   }
 
-  public get isWritable(): boolean {
-    return isRoom(this.displayer) && this.displayer.isWritable;
+  get room(): Room | null {
+    return this._room;
   }
 
-  public async setWritable(isWritable: boolean): Promise<void> {
-    if (isRoom(this.displayer)) {
-      await this.displayer.setWritable(isWritable);
-    } else {
-      this._logError(
-        new Error(`SyncedStore: cannot set writable on replay mode`)
-      );
-    }
+  public get isPluginWritable(): boolean {
+    return this._isPluginWritable$.value;
   }
 
-  public addWritableChangedListener(
+  public addPluginWritableChangeListener(
     listener: (isWritable: boolean) => void
   ): () => void {
-    const handler = (isReadonly: boolean) => listener(!isReadonly);
-    this.displayer.callbacks.on("onEnableWriteNowChanged", handler);
-    return () =>
-      this.displayer.callbacks.off("onEnableWriteNowChanged", handler);
+    return this._isPluginWritable$.reaction(listener);
+  }
+
+  public get isRoomWritable(): boolean {
+    return this._isRoomWritable$.value;
+  }
+
+  public async setRoomWritable(isWritable: boolean): Promise<void> {
+    if (!this.room) {
+      throw new Error("[SyncedStore]: cannot set room writable in replay mode");
+    }
+    await this.room.setWritable(isWritable);
+  }
+
+  public addRoomWritableChangeListener(
+    listener: (isWritable: boolean) => void
+  ): () => void {
+    return this._isRoomWritable$.reaction(listener);
   }
 
   /** Dispatch events to other clients (and self). */
   public dispatchEvent<
     TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
   >(event: TEvent, payload: TEventData[TEvent]): void {
-    if (!isRoom(this.displayer)) {
-      // can't dispatch events on replay mode
-      return;
-    }
-
-    if (!this.displayer.isWritable) {
-      this._logError(
-        new Error(
-          `SyncedStore: ${event} event can't be dispatched without writable access`
-        )
+    if (!this.room) {
+      throw new Error(
+        "[SyncedStore] cannot dispatch event without writable access"
       );
-      return;
     }
-
-    return this.displayer.dispatchMagixEvent(event, payload);
+    this.room.dispatchMagixEvent(event, payload);
   }
 
   /** Listen to events from others clients (and self messages). */
@@ -128,9 +141,10 @@ export class SyncedStore<
     );
   }
 
-  public _logError(...messages: any[]): void {
-    if (this.errorLog) {
-      console.error(...messages);
-    }
+  public destroy(): void {
+    this._sideEffect.flushAll();
+    this._isPluginWritable$.destroy();
+    this.plugin$.destroy();
+    this._isRoomWritable$.destroy();
   }
 }
