@@ -14,10 +14,20 @@ main();
 async function main(): Promise<void> {
   const roomUUID = localStorage.getItem("roomUUID");
   const roomToken = localStorage.getItem("roomToken");
+  const search = window.location.search;
+  const url = new URLSearchParams(search);
+  const urlRoomUUID = url.get("uuid");
+  const urlRoomToken = url.get("roomToken");
 
-  const room = await (roomUUID && roomToken
-    ? joinRoom(roomUUID, roomToken)
-    : createRoom());
+  let room: Room;
+  if (urlRoomUUID && urlRoomToken) {
+    room = await joinRoom(urlRoomUUID, urlRoomToken);
+  } else {
+    room = await (roomUUID && roomToken
+      ? joinRoom(roomUUID, roomToken)
+      : createRoom());
+  }
+
   (window as any).room = room;
 
   const syncedStore = await SyncedStorePlugin.init(room);

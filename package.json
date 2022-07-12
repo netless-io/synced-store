@@ -21,7 +21,8 @@
     "build": "vite build && npm run types",
     "build:dev": "vite build --mode development && npm run types",
     "release": "standard-version",
-    "test": "vitest"
+    "test": "vitest",
+    "e2e": "playwright test"
   },
   "peerDependencies": {
     "white-web-sdk": ">= 2.16"
@@ -33,10 +34,13 @@
     "value-enhancer": "^1.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.23.2",
     "@types/lodash-es": "^4.17.6",
+    "@types/node": "^18.0.3",
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
     "cross-env": "^7.0.3",
+    "dotenv": "^16.0.1",
     "eslint": "^8.17.0",
     "eslint-config-prettier": "^8.5.0",
     "prettier": "^2.6.2",
