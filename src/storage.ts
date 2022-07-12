@@ -124,7 +124,7 @@ export class Storage<TState extends Record<string, any> = any> extends Remitter<
         () => {
           const rawState = getRawState();
           if (rawState) {
-            this._refine.replaceState(toJS(rawState));
+            onDiff(this._refine.replaceState(toJS(rawState)));
             propsDisposer?.();
             propsDisposer = listenNamespaceProps(rawState);
           }
