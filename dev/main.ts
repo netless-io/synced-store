@@ -36,16 +36,23 @@ async function main(): Promise<void> {
   const mainStorage = syncedStore.connectStorage<{
     hello: string;
     world?: string;
-  }>("main", { hello: "hello" });
+  }>("main", { hello: "hello", world: "world" });
   (window as any).mainStorage = mainStorage;
 
   mainStorage.on("stateChanged", diff => {
-    console.log("storage state changed", diff);
+    (window as any).lastDiff = diff;
+    console.log("-- diff:", JSON.stringify(diff));
   });
 
-  mainStorage.setState({ world: "world" });
+  (window as any).broadcast = (message: any) => {
+    syncedStore.dispatchEvent("broadcast", message);
+  };
 
-  console.log("storage state", mainStorage.state); // { hello: 'hello', world: 'world' }
+  // it also receives self messages
+  syncedStore.addEventListener("broadcast", ev => {
+    (window as any).lastMessage = ev.payload;
+    console.log("-- message:", ev.payload);
+  });
 }
 
 async function createRoom(): Promise<Room> {
@@ -64,17 +71,24 @@ async function createRoom(): Promise<Room> {
 
 async function joinRoom(roomUUID: string, roomToken: string): Promise<Room> {
   const uid = genUID();
-  return whiteboard.joinRoom({
-    uuid: roomUUID,
-    roomToken,
-    uid,
-    invisiblePlugins: [SyncedStorePlugin],
-    disableMagixEventDispatchLimit: true,
-    userPayload: {
+  return whiteboard.joinRoom(
+    {
+      uuid: roomUUID,
+      roomToken,
       uid,
-      nickName: uid,
+      invisiblePlugins: [SyncedStorePlugin],
+      disableMagixEventDispatchLimit: true,
+      userPayload: {
+        uid,
+        nickName: uid,
+      },
     },
-  });
+    {
+      onPhaseChanged(phase) {
+        console.log("-- phase:", phase);
+      },
+    }
+  );
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
