@@ -42,18 +42,14 @@ export function makeRefineValue<TValue>(
 }
 
 export class Refine<TState = any> {
-  public defaultState: TState;
   public state: TState;
 
   public constructor(refState?: RefineState<TState>, defaultState?: TState) {
-    this.defaultState = defaultState || ({} as TState);
     this.state = {} as TState;
-    this.replaceState(refState);
+    this.replaceState(refState || defaultState || ({} as TState));
   }
 
-  public replaceState(
-    state: RefineState<TState> = this.defaultState
-  ): Diff<TState> | null {
+  public replaceState(state: RefineState<TState>): Diff<TState> | null {
     if (!isObject(state)) {
       throw new Error("[SyncedStore] replaceState: state must be an object");
     }
