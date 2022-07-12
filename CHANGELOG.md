@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.0](https://github.com/crimx/synced-store/compare/v1.1.5...v2.0.0) (2022-07-12)
+
+
+### Bug Fixes
+
+* emit diff on state changed ([3d9aa49](https://github.com/crimx/synced-store/commit/3d9aa49e34bc4d970ed51d857f2297eb8e98198b))
+
 ### [1.1.5](https://github.com/crimx/synced-store/compare/v1.1.4...v1.1.5) (2022-06-08)
 
 ### [1.1.4](https://github.com/crimx/synced-store/compare/v1.1.3...v1.1.4) (2022-05-30)
