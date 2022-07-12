@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
   const isProd = mode === "production";
 
   return {
+    test: {
+      include: ["test/**/*.test.ts"],
+    },
     build: {
       lib: {
         entry: path.resolve(__dirname, "src/index.ts"),

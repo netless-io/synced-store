@@ -82,6 +82,20 @@ pnpm i
 pnpm start
 ```
 
+Unit Test:
+
+```bash
+pnpm t
+```
+
+End-to-end Test:
+
+```bash
+pnpm dev
+# then start a new terminal tab
+pnpm e2e
+```
+
 ### API
 
 - **static SyncedStorePlugin.init(room)**
