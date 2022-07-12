@@ -33,7 +33,7 @@ const room = await whiteboard.joinRoom({
 
 // Define typed event keys and payloads
 type EventData = {
-  click: { id: string };
+  "click-event": { id: string };
 };
 
 const syncedStore = await SyncedStorePlugin.init<EventData>(room);
