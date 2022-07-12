@@ -52,7 +52,7 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
   public connectStorage<TState extends Record<string, unknown> = any>(
     namespace?: string,
     defaultState?: TState
-  ): Storage<TState> {
+  ): Omit<Storage<TState>, "emit" | "remit"> {
     const storage = new Storage({
       plugin$: this.plugin$,
       isWritable$: this._isPluginWritable$,
