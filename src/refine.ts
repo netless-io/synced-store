@@ -34,6 +34,13 @@ export function isMaybeRefineValue<TValue>(
   return !isObject(value) || (value as RefineValue<TValue>)[REFINE_KEY] === 1;
 }
 
+export function makeRefineValue<TValue>(
+  value: TValue,
+  key: string = genUID()
+): RefineValue<TValue> {
+  return { [REFINE_KEY]: 1, k: key, v: value };
+}
+
 export class Refine<TState = any> {
   public defaultState: TState;
   public state: TState;
@@ -80,6 +87,7 @@ export class Refine<TState = any> {
       const refValue = this.ensureRefValue(maybeRefValue);
       if (this.state[key] !== refValue.v) {
         const oldValue = this.deleteRefKey(key);
+        this.state[key] = refValue.v;
         return { oldValue, newValue: refValue.v };
       }
     } else if (typeof maybeRefValue === "undefined") {
@@ -116,7 +124,7 @@ export class Refine<TState = any> {
     }
     let refValue = this.refMap.get(value);
     if (!refValue) {
-      refValue = { k: this.genKey(), v: value, [REFINE_KEY]: 1 };
+      refValue = makeRefineValue(value, this.genKey());
       this.refMap.set(value, refValue);
     }
     this.refKeys.add(refValue.k);
