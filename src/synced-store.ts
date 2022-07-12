@@ -2,7 +2,6 @@ import { SideEffectManager } from "side-effect-manager";
 import type { ReadonlyVal } from "value-enhancer";
 import { combine, Val } from "value-enhancer";
 import type {
-  Room,
   EventListener as WhiteEventListener,
   MagixEventListenerOptions,
   Displayer,
@@ -23,14 +22,12 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
   private readonly _isPluginWritable$: ReadonlyVal<boolean>;
   private readonly _isRoomWritable$ = new Val(false);
   private readonly _sideEffect = new SideEffectManager();
-  private _room: Room | null;
 
   public constructor(
     displayer: Displayer,
     invisiblePlugin$: Val<InvisiblePlugin<any> | null>
   ) {
     this.displayer = displayer;
-    this._room = null;
     this.plugin$ = invisiblePlugin$;
 
     this._sideEffect.add(() => {
@@ -47,12 +44,6 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
     this._isPluginWritable$ = combine(
       [this.plugin$, this._isRoomWritable$],
       ([plugin, isRoomWritable]) => plugin !== null && isRoomWritable
-    );
-
-    this._sideEffect.addDisposer(
-      this._isRoomWritable$.subscribe(isRoomWritable => {
-        this._room = isRoomWritable && isRoom(displayer) ? displayer : null;
-      })
     );
   }
 
@@ -78,10 +69,6 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
     return storage;
   }
 
-  get room(): Room | null {
-    return this._room;
-  }
-
   public get isPluginWritable(): boolean {
     return this._isPluginWritable$.value;
   }
@@ -97,10 +84,10 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
   }
 
   public async setRoomWritable(isWritable: boolean): Promise<void> {
-    if (!this.room) {
+    if (!isRoom(this.displayer)) {
       throw new Error("[SyncedStore]: cannot set room writable in replay mode");
     }
-    await this.room.setWritable(isWritable);
+    await this.displayer.setWritable(isWritable);
   }
 
   public addRoomWritableChangeListener(
@@ -113,12 +100,12 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
   public dispatchEvent<
     TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
   >(event: TEvent, payload: TEventData[TEvent]): void {
-    if (!this.room) {
+    if (!isRoom(this.displayer)) {
       throw new Error(
         "[SyncedStore] cannot dispatch event without writable access"
       );
     }
-    this.room.dispatchMagixEvent(event, payload);
+    this.displayer.dispatchMagixEvent(event, payload);
   }
 
   /** Listen to events from others clients (and self messages). */
