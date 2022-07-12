@@ -20,7 +20,8 @@
     "types": "cross-env NODE_ENV=production tsc --declaration --emitDeclarationOnly --jsx react --esModuleInterop --outDir dist",
     "build": "vite build && npm run types",
     "build:dev": "vite build --mode development && npm run types",
-    "release": "standard-version"
+    "release": "standard-version",
+    "test": "vitest"
   },
   "peerDependencies": {
     "white-web-sdk": ">= 2.16"
@@ -43,6 +44,7 @@
     "standard-version": "^9.5.0",
     "typescript": "^4.7.3",
     "vite": "^2.9.10",
+    "vitest": "^0.18.0",
     "white-web-sdk": "^2.16.24"
   }
 }
