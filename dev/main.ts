@@ -29,7 +29,7 @@ async function main(): Promise<void> {
   }>("main", { hello: "hello" });
   (window as any).mainStorage = mainStorage;
 
-  mainStorage.onStateChanged.addListener(diff => {
+  mainStorage.on("stateChanged", diff => {
     console.log("storage state changed", diff);
   });
 
