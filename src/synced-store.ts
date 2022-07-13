@@ -52,19 +52,19 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
   public connectStorage<TState extends Record<string, unknown> = any>(
     namespace?: string,
     defaultState?: TState
-  ): Omit<Storage<TState>, "emit" | "remit"> {
+  ): Storage<TState> {
     const storage = new Storage({
       plugin$: this.plugin$,
       isWritable$: this._isPluginWritable$,
       namespace,
       defaultState,
     });
-    const destroyDisposerID = this._sideEffect.addDisposer(() =>
-      storage.destroy()
+    const disconnectDisposerID = this._sideEffect.addDisposer(() =>
+      storage.disconnect()
     );
     const disposerID = this._sideEffect.addDisposer(
-      storage.on("destroyed", () => {
-        this._sideEffect.remove(destroyDisposerID);
+      storage.on("disconnected", () => {
+        this._sideEffect.remove(disconnectDisposerID);
         this._sideEffect.flush(disposerID);
       })
     );

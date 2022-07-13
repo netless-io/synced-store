@@ -13,6 +13,11 @@ import type { RefineState } from "./refine";
 import { Refine } from "./refine";
 import type { SideEffectDisposer } from "side-effect-manager";
 import { SideEffectManager } from "side-effect-manager";
+import type {
+  RemitterDisposer,
+  RemitterEventNames,
+  RemitterListener,
+} from "remitter";
 import { Remitter } from "remitter";
 
 export const STORAGE_NS = "_WM-StOrAgE_";
@@ -21,7 +26,7 @@ export const MAIN_STORAGE = "_WM-MaIn-StOrAgE_";
 
 export interface StorageEventData<TState = any> {
   stateChanged: Diff<TState>;
-  destroyed: void;
+  disconnected: void;
 }
 
 export interface StorageConfig<TState = any> {
@@ -31,15 +36,14 @@ export interface StorageConfig<TState = any> {
   defaultState?: TState;
 }
 
-export class Storage<TState extends Record<string, any> = any> extends Remitter<
-  StorageEventData<TState>
-> {
+export class Storage<TState extends Record<string, any> = any> {
   public readonly namespace: string;
   public defaultState: Readonly<TState>;
   private _plugin$: StorageConfig["plugin$"];
   private _isWritable$: StorageConfig["isWritable$"];
   private _refine: Refine<TState>;
   private _sideEffect = new SideEffectManager();
+  private _events = new Remitter<StorageEventData>();
 
   public constructor({
     plugin$,
@@ -47,13 +51,14 @@ export class Storage<TState extends Record<string, any> = any> extends Remitter<
     namespace = MAIN_STORAGE,
     defaultState = {} as TState,
   }: StorageConfig<TState>) {
-    super();
-
     if (defaultState && !isObject(defaultState)) {
       throw new Error(
         `Default state for Storage ${namespace} is not an object.`
       );
     }
+
+    this.on = this._events.on.bind(this._events);
+    this.off = this._events.off.bind(this._events);
 
     const getRawState = (): RefineState<TState> =>
       plugin$.value?.attributes[STORAGE_NS]?.[namespace];
@@ -66,7 +71,7 @@ export class Storage<TState extends Record<string, any> = any> extends Remitter<
 
     const onDiff = (diff: Diff<TState> | null): void => {
       if (diff) {
-        this.emit("stateChanged", diff);
+        this._events.emit("stateChanged", diff);
       }
     };
 
@@ -206,27 +211,51 @@ export class Storage<TState extends Record<string, any> = any> extends Remitter<
     }
   }
 
-  /** reset storage to default state */
-  public resetStorage(): void {
-    const plugin = this._requireAccess("deleteStorage");
+  /** reset storage state to default state */
+  public resetState(): void {
+    const plugin = this._requireAccess("resetState");
     plugin.updateAttributes([STORAGE_NS, this.namespace], this.defaultState);
   }
 
-  public override destroy(): void {
-    this._destroyed = true;
+  /** delete synced storage data and disconnect from synced storage */
+  public deleteStorage(): void {
+    const plugin = this._requireAccess("deleteStorage");
+    this.disconnect();
+    plugin.updateAttributes([STORAGE_NS, this.namespace], undefined);
+  }
+
+  /**
+   * Add a listener to the eventName.
+   */
+  public on: <TEventName extends RemitterEventNames<StorageEventData>>(
+    eventName: TEventName,
+    listener: RemitterListener<StorageEventData, TEventName>
+  ) => RemitterDisposer;
+
+  /**
+   * Remove a listener from the eventName.
+   */
+  public off: <TEventName extends RemitterEventNames<StorageEventData>>(
+    eventName: TEventName,
+    listener: RemitterListener<StorageEventData, TEventName>
+  ) => boolean;
+
+  /** Disconnect from synced storage and release listeners */
+  public disconnect(): void {
+    this._disconnected = true;
     this._sideEffect.flushAll();
-    this.emit("destroyed");
-    super.destroy();
+    this._events.emit("disconnected");
+    this._events.destroy();
   }
 
-  public get destroyed(): boolean {
-    return this._destroyed;
+  public get disconnected(): boolean {
+    return this._disconnected;
   }
 
-  private _destroyed = false;
+  private _disconnected = false;
 
   private _requireAccess(method: string): InvisiblePlugin<any> {
-    if (this._destroyed) {
+    if (this._disconnected) {
       throw new Error(
         `Cannot call ${method} on destroyed Storage '${this.namespace}'.`
       );
