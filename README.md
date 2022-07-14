@@ -84,68 +84,72 @@ pnpm i
 pnpm start
 ```
 
-Unit Test:
+### Testing
+
+#### Unit Test:
 
 ```bash
 pnpm t
 ```
 
-End-to-end Test:
+#### End-to-end Test:
 
-```bash
-# start testing page
-pnpm e2e:page
-# then start a new terminal tab
-pnpm e2e
-```
+1. Start hosting the testing resources
+   ```bash
+   pnpm e2e:page
+   ```
+2. Then then open a new terminal to start e2e tests
+   ```bash
+   pnpm e2e
+   ```
 
 ### API
 
 - **static SyncedStorePlugin.init(room)**
 
-  A `static` method that inits the SyncedStore. Should be called right after joining room.
+A `static` method that inits the SyncedStore. Should be called right after joining room.
 
-  Returns: `Promise<SyncedStore<EventData>>`
+Returns: `Promise<SyncedStore<EventData>>`
 
 - **SyncedStore.isRoomWritable**
 
-  Type: `boolean`
+Type: `boolean`
 
-  Shortcut to whiteboard room writable state. When it is `false`, calling `storage.setState()` and `dispatchEvent()` will throw errors.
+Shortcut to whiteboard room writable state. When it is `false`, calling `storage.setState()` and `dispatchEvent()` will throw errors.
 
 - **SyncedStore.setRoomWritable(isWritable)**
 
-  Shortcut to change whiteboard room writable state.
+Shortcut to change whiteboard room writable state.
 
 - **SyncedStore.addRoomWritableChangeListener(listener)**
 
-  It fires when whiteboard room writable state changes.
+It fires when whiteboard room writable state changes.
 
-  Type: `(isRoomWritable: boolean) => void`
+Type: `(isRoomWritable: boolean) => void`
 
-  Returns: `() => void` - a disposable function that can be called to remove the listener.
+Returns: `() => void` - a disposable function that can be called to remove the listener.
 
 - **SyncedStore.isPluginWritable**
 
-  Type: `boolean`
+Type: `boolean`
 
-  It is `true` if `isRoomWritable === true` and plugin finished initialization. When it is `false`, calling `storage.setState()` will throw errors.
+It is `true` if `isRoomWritable === true` and plugin finished initialization. When it is `false`, calling `storage.setState()` will throw errors.
 
 - **SyncedStore.addPluginWritableChangeListener(listener)**
 
-  It fires when plugin writable state changes.
+It fires when plugin writable state changes.
 
-  Type: `(isPluginWritable: boolean) => void`
+Type: `(isPluginWritable: boolean) => void`
 
-  Returns: `() => void` - a disposable function that can be called to remove the listener.
+Returns: `() => void` - a disposable function that can be called to remove the listener.
 
 - **SyncedStore.dispatchEvent(event, payload)**
 
-  Broadcast an event message to other clients.
+Broadcast an event message to other clients.
 
-  ```js
-  syncedStore.dispatchEvent("click", { data: "data" });
-  ```
+```js
+syncedStore.dispatchEvent("click", { data: "data" });
+```
 
 - **SyncedStore.addEventListener(event, listener)**
 
