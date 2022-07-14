@@ -1,55 +1,41 @@
-import type { RoomPhase } from "white-web-sdk";
-
 import { expect, test } from "@playwright/test";
-import {
-  block,
-  createAnotherPage,
-  createRoom,
-  getLastDiff,
-  getMainStoreState,
-  getWindow,
-  gotoRoom,
-  listenConsole,
-  matchPrefix,
-  setMainStoreState,
-} from "./helper";
+import { createTestingPageWithRoom } from "./helper";
 
-test("断网重连", async ({ page, browser }) => {
-  const { uuid, token } = await createRoom();
-  // listenConsole(page, console.log);
+test("Reconnection", async ({ page, browser }) => {
+  const page1 = await createTestingPageWithRoom(browser, page);
+  const page2 = await page1.duplicatePageWithRoom();
 
-  await gotoRoom(page, uuid, token);
-  const handle = await getWindow(page);
+  expect(await page1.roomPhase()).toBe("connected");
+  expect(await page2.roomPhase()).toBe("connected");
 
-  const [page2offline, setOffline] = block();
-  const [page2online, setOnline] = block();
-  const [diffExist, setDiff] = block();
+  const page1OldState = await page1.getStorageState();
 
-  const page2 = await createAnotherPage(browser, uuid, token);
-  listenConsole(page2.page, line => {
-    // console.log("page2:", line);
+  let page1Diff;
+  let page2Diff;
 
-    const match = matchPrefix(line, "-- phase:");
-    if (match && match.trim() === ("reconnecting" as `${RoomPhase}`)) {
-      setOffline();
-    }
-    if (match && match.trim() === ("connected" as `${RoomPhase}`)) {
-      setOnline();
-    }
+  page1.events.on("stateChanged", diff => (page1Diff = diff));
+  page2.events.on("stateChanged", diff => (page1Diff = diff));
 
-    matchPrefix(line, "-- diff:") && setDiff();
+  await page2.page.context().setOffline(true);
+  await page2.waitForNextEvent(
+    "roomPhaseChanged",
+    30000,
+    roomPhase => roomPhase !== "connected"
+  );
+
+  await page1.setStorageState({ hello: 422222 });
+
+  await page2.page.context().setOffline(false);
+  await page2.waitForNextEvent(
+    "roomPhaseChanged",
+    30000,
+    roomPhase => roomPhase === "connected"
+  );
+
+  expect(page1Diff).toEqual({
+    hello: { newValue: 422222, oldValue: page1OldState.hello },
   });
-
-  await page2.context.setOffline(true);
-  await page2offline;
-
-  // now page2 offline, set state at page1 (online)
-  await setMainStoreState(handle, { hello: 42 });
-
-  await page2.context.setOffline(false);
-  await page2online;
-  await diffExist;
-
-  expect(await getLastDiff(page2.handle)).toBeDefined();
-  expect(await getMainStoreState(page2.handle)).toHaveProperty("hello", 42);
+  expect(page2Diff).toBeFalsy();
+  expect(await page1.getStorageState()).toHaveProperty("hello", 422222);
+  expect(await page2.getStorageState()).toHaveProperty("hello", 422222);
 });

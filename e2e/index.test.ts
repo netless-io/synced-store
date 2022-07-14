@@ -1,41 +1,30 @@
 import { expect, test } from "@playwright/test";
-import {
-  createRoom,
-  getMainStoreState,
-  getRoomPhase,
-  getWindow,
-  gotoRoom,
-  setMainStoreState,
-  waitForPhase,
-} from "./helper";
+import { createTestingPageWithRoom } from "./helper";
 
-test.describe("正常流程", () => {
-  test.beforeEach(async ({ page }) => {
-    const { uuid, token } = await createRoom();
-    await gotoRoom(page, uuid, token);
-  });
+test.describe("Normal Flow", () => {
+  test("Mounted", async ({ browser, page }) => {
+    const page1 = await createTestingPageWithRoom(browser, page);
 
-  test("挂载成功", async ({ page }) => {
-    const handle = await getWindow(page);
-
-    expect(await getRoomPhase(handle)).toBe("connected");
-    expect(await getMainStoreState(handle)).toEqual({
+    expect(await page1.roomPhase()).toBe("connected");
+    expect(await page1.getStorageState()).toEqual({
       hello: "hello",
       world: "world",
     });
   });
 
-  test("刷新页面 - 保持状态", async ({ page }) => {
-    const handle = await getWindow(page);
+  test("State Restored After Refresh", async ({ browser, page }) => {
+    const page1 = await createTestingPageWithRoom(browser, page);
 
-    await setMainStoreState(handle, { hello: 42 });
-    expect(await getMainStoreState(handle)).toHaveProperty("hello", 42);
-    await page.waitForTimeout(1000); // wait for sending websocket message
+    await page1.setStorageState({ hello: 42 });
+    expect(await page1.getStorageState()).toHaveProperty("hello", 42);
 
-    await page.reload();
-    const handle2 = await getWindow(page);
-    await waitForPhase(handle2, "connected");
+    await page1.page.reload();
+    await page1.waitForNextEvent(
+      "roomPhaseChanged",
+      10000,
+      roomPhase => roomPhase === "connected"
+    );
 
-    expect(await getMainStoreState(handle2)).toHaveProperty("hello", 42);
+    expect(await page1.getStorageState()).toHaveProperty("hello", 42);
   });
 });

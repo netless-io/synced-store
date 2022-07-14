@@ -1,40 +1,32 @@
 import { expect, test } from "@playwright/test";
-import {
-  block,
-  createAnotherPage,
-  createRoom,
-  getLastDiff,
-  getWindow,
-  gotoRoom,
-  setMainStoreState,
-} from "./helper";
+import { createTestingPageWithRoom } from "./helper";
 
-test("监听状态变更", async ({ page, browser }) => {
-  const { uuid, token } = await createRoom();
-  await gotoRoom(page, uuid, token);
+test("Listening to State Changed", async ({ page, browser }) => {
+  const page1 = await createTestingPageWithRoom(browser, page);
+  const page2 = await page1.duplicatePageWithRoom();
 
-  const handle = await getWindow(page);
+  let page1Diff;
+  let page2Diff;
+  page1.events.on("stateChanged", diff => (page1Diff = diff));
+  page2.events.on("stateChanged", diff => (page2Diff = diff));
 
-  const [page2ready, resolvePage2] = block();
+  const page1OldState = await page1.getStorageState();
+  const page2OldState = await page2.getStorageState();
 
-  const page1 = async () => {
-    await page2ready;
+  expect(page1OldState).toEqual(page2OldState);
 
-    await setMainStoreState(handle, { hello: 42 });
-    const diff = await getLastDiff(handle);
-    expect(diff).toBeDefined();
-    expect(diff?.hello).toMatchObject({ oldValue: "hello", newValue: 42 });
-  };
+  expect(page1Diff).toBeUndefined();
+  expect(page2Diff).toBeUndefined();
 
-  const page2 = async () => {
-    const { page, handle } = await createAnotherPage(browser, uuid, token);
-    resolvePage2();
+  await page1.setStorageState({ hello: "mmmm" });
+  await page2.waitForNextEvent("stateChanged");
 
-    await page.waitForTimeout(1000);
-    const diff = await getLastDiff(handle);
-    expect(diff).toBeDefined();
-    expect(diff?.hello).toMatchObject({ oldValue: "hello", newValue: 42 });
-  };
+  expect(await page1.getStorageState()).toEqual(await page2.getStorageState());
 
-  await Promise.all([page1(), page2()]);
+  expect(page1Diff).toEqual({
+    hello: { newValue: "mmmm", oldValue: page1OldState.hello },
+  });
+  expect(page1Diff).toEqual({
+    hello: { newValue: "mmmm", oldValue: page2OldState.hello },
+  });
 });

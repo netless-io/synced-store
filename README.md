@@ -13,7 +13,9 @@ npm add @netless/synced-store
 Init SyncedStore right after joining room:
 
 ```ts
-import { SyncedStorePlugin } from "@netless/synced-store";
+import { createSyncedStorePlugin } from "@netless/synced-store";
+
+const SyncedStorePlugin = createSyncedStorePlugin();
 
 const whiteboard = new WhiteWebSdk({
   appIdentifier: "xxxxxxxxxxxxxx",
@@ -91,7 +93,8 @@ pnpm t
 End-to-end Test:
 
 ```bash
-pnpm dev
+# start testing page
+pnpm e2e:page
 # then start a new terminal tab
 pnpm e2e
 ```

@@ -1,6 +1,6 @@
 import { SideEffectManager } from "side-effect-manager";
 import type { ReadonlyVal } from "value-enhancer";
-import { combine, Val } from "value-enhancer";
+import { combine } from "value-enhancer";
 import type {
   EventListener as WhiteEventListener,
   MagixEventListenerOptions,
@@ -18,33 +18,26 @@ import type {
 
 export class SyncedStore<TEventData extends Record<string, any> = any> {
   public readonly displayer: Displayer;
-  public readonly plugin$: Val<InvisiblePlugin<any> | null>;
+  public readonly _plugin$: ReadonlyVal<InvisiblePlugin<any> | null>;
 
   private readonly _isPluginWritable$: ReadonlyVal<boolean>;
-  private readonly _isRoomWritable$ = new Val(false);
+  private readonly _isRoomWritable$: ReadonlyVal<boolean>;
   private readonly _sideEffect = new SideEffectManager();
   private readonly _room: Room | null;
 
   public constructor(
     displayer: Displayer,
-    invisiblePlugin$: Val<InvisiblePlugin<any> | null>
+    invisiblePlugin$: ReadonlyVal<InvisiblePlugin<any> | null>,
+    isRoomWritable$: ReadonlyVal<boolean>
   ) {
     this.displayer = displayer;
-    this.plugin$ = invisiblePlugin$;
+    this._plugin$ = invisiblePlugin$;
+    this._isRoomWritable$ = isRoomWritable$;
     const room = isRoom(displayer) ? displayer : null;
     this._room = room;
 
-    if (room) {
-      this._sideEffect.add(() => {
-        const update = () => this._isRoomWritable$.setValue(room.isWritable);
-        update();
-        room.callbacks.on("onEnableWriteNowChanged", update);
-        return () => room.callbacks.off("onEnableWriteNowChanged", update);
-      });
-    }
-
     this._isPluginWritable$ = combine(
-      [this.plugin$, this._isRoomWritable$],
+      [this._plugin$, this._isRoomWritable$],
       ([plugin, isRoomWritable]) => plugin !== null && isRoomWritable
     );
   }
@@ -54,7 +47,7 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
     defaultState?: TState
   ): Storage<TState> {
     const storage = new Storage({
-      plugin$: this.plugin$,
+      plugin$: this._plugin$,
       isWritable$: this._isPluginWritable$,
       namespace,
       defaultState,
@@ -141,7 +134,5 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
   public destroy(): void {
     this._sideEffect.flushAll();
     this._isPluginWritable$.destroy();
-    this.plugin$.destroy();
-    this._isRoomWritable$.destroy();
   }
 }

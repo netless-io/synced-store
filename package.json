@@ -22,6 +22,7 @@
     "build:dev": "vite build --mode development && npm run types",
     "release": "standard-version",
     "test": "vitest",
+    "e2e:page": "vite -c e2e/webpage/vite.config.js",
     "e2e": "playwright test"
   },
   "peerDependencies": {

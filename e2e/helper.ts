@@ -1,25 +1,156 @@
-import type { Page, JSHandle, Browser } from "@playwright/test";
-import type { RoomPhase } from "white-web-sdk";
-import type { Storage } from "../src/storage";
-import type { Diff } from "../src/typings";
-
 import { request } from "@playwright/test";
+import type { Page, Browser } from "@playwright/test";
+import { Remitter } from "remitter";
+import type { RoomPhase } from "white-web-sdk";
+import type { Diff } from "../src/typings";
+import type { JoinRoomConfig } from "./typings";
 
-export const getWindow = async (page: Page): Promise<JSHandle> => {
-  const handle = await page.evaluateHandle(() => ({ window }));
-  const properties = await handle.getProperties();
-  const window = properties.get("window");
-  if (window) {
-    return window;
-  } else {
-    throw new Error("window is not found");
+export interface TestingPageEventData {
+  stateChanged: Diff<Record<string, any>>;
+  roomPhaseChanged: RoomPhase;
+  roomWritableChanged: boolean;
+  pluginWritableChanged: boolean;
+  hasPluginChanged: boolean;
+}
+
+export class TestingPage {
+  events = new Remitter();
+  roomConfig?: { uuid: string; token: string };
+
+  constructor(public browser: Browser, public page: Page) {
+    this.page.exposeFunction(
+      "onStateChanged",
+      (diff: TestingPageEventData["stateChanged"]) => {
+        this.events.emit("stateChanged", diff);
+      }
+    );
+
+    this.page.exposeFunction("onRoomPhaseChanged", (phase: RoomPhase) => {
+      this.events.emit("roomPhaseChanged", phase);
+    });
+
+    this.page.exposeFunction("onRoomWritableChanged", (isWritable: boolean) => {
+      this.events.emit("roomWritableChanged", isWritable);
+    });
+
+    this.page.exposeFunction(
+      "onPluginWritableChanged",
+      (isWritable: boolean) => {
+        this.events.emit("pluginWritableChanged", isWritable);
+      }
+    );
+
+    this.page.exposeFunction("onHasPluginChanged", (hasPlugin: boolean) => {
+      this.events.emit("hasPluginChanged", hasPlugin);
+    });
   }
-};
 
-export const gotoRoom = async (page: Page, uuid: string, token: string) => {
-  await page.goto(`/?uuid=${uuid}&roomToken=${token}`);
-  await waitForPhase(await getWindow(page), "connected");
-};
+  async duplicatePage(): Promise<TestingPage> {
+    return new TestingPage(
+      this.browser,
+      await (await this.browser.newContext()).newPage()
+    );
+  }
+
+  async duplicatePageWithRoom(
+    config: Partial<JoinRoomConfig> = {}
+  ): Promise<TestingPage> {
+    const page = await this.duplicatePage();
+    if (!this.roomConfig && (!config.uuid || !config.token)) {
+      throw new Error("uuid and token are required");
+    }
+    await page.gotoRoom({
+      ...(this.roomConfig || {}),
+      ...config,
+    } as JoinRoomConfig);
+    return page;
+  }
+
+  async gotoRoom(config: JoinRoomConfig): Promise<void> {
+    await this.page.goto(
+      `/?config=${encodeURIComponent(JSON.stringify(config))}`
+    );
+    await this.waitForNextEvent(
+      "roomPhaseChanged",
+      10000,
+      roomPhase => roomPhase === "connected"
+    );
+  }
+
+  async roomPhase(): Promise<RoomPhase> {
+    return this.page.evaluate(() => (window as any).room.phase);
+  }
+
+  async isRoomWritable(): Promise<boolean> {
+    return this.page.evaluate(() => (window as any).room.isWritable);
+  }
+
+  async setRoomWritable(isWritable: boolean): Promise<void> {
+    await this.page.evaluate(
+      isWritable => (window as any).room.setWritable(isWritable),
+      isWritable
+    );
+  }
+
+  async hasInvisiblePlugin(): Promise<boolean> {
+    return this.page.evaluate(() =>
+      Boolean((window as any).syncedStore._plugin$.value)
+    );
+  }
+
+  async getStorageState<TState = any>(): Promise<TState> {
+    return this.page.evaluate(() => (window as any).mainStorage.state);
+  }
+
+  async setStorageState<TState = any>(state: Partial<TState>): Promise<void> {
+    await this.page.evaluate(
+      state => (window as any).mainStorage.setState(state),
+      state
+    );
+  }
+
+  async waitForNextEvent<TEventName extends keyof TestingPageEventData>(
+    eventName: TEventName,
+    timeout = 10000,
+    predicate?: (data: TestingPageEventData[TEventName]) => boolean
+  ): Promise<void> {
+    await Promise.race([
+      new Promise<void>(resolve => {
+        const handler = (data: TestingPageEventData[TEventName]) => {
+          if (!predicate || predicate(data)) {
+            this.events.off(eventName, handler);
+            resolve();
+          }
+        };
+        this.events.on(eventName, handler);
+      }),
+      new Promise((_resolve, reject) => {
+        setTimeout(() => {
+          reject(new Error(`Timeout waiting for event ${eventName}`));
+        }, timeout);
+      }),
+    ]);
+  }
+}
+
+export async function createTestingPage(browser: Browser) {
+  return new TestingPage(browser, await (await browser.newContext()).newPage());
+}
+
+export async function createTestingPageWithRoom(
+  browser: Browser,
+  page: Page,
+  config: Partial<JoinRoomConfig> = {}
+) {
+  const roomConfig =
+    config.token && config.uuid
+      ? { uuid: config.uuid, token: config.token }
+      : await createRoom();
+  const page1 = new TestingPage(browser, page);
+  await page1.gotoRoom({ ...roomConfig, ...config });
+  page1.roomConfig = roomConfig;
+  return page1;
+}
 
 export const createRoom = async () => {
   const context = await request.newContext();
@@ -48,84 +179,4 @@ export const createRoom = async () => {
   );
   const tokenBody = await tokenResult.json();
   return { uuid: roomBody.uuid, token: tokenBody };
-};
-
-export const getRoomPhase = (handle: JSHandle) => {
-  return handle.evaluate(async window => {
-    return window.room?.phase;
-  });
-};
-
-export const waitForPhase = async (handle: JSHandle, phase: `${RoomPhase}`) => {
-  while ((await getRoomPhase(handle)) !== phase) {
-    await new Promise(resolve => setTimeout(resolve, 200));
-  }
-};
-
-export const createAnotherPage = async (
-  browser: Browser,
-  uuid: string,
-  token: string
-) => {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await gotoRoom(page, uuid, token);
-  const handle = await getWindow(page);
-  return { page, context, handle };
-};
-
-export const setMainStoreState = async (
-  handle: JSHandle,
-  state: Record<string, unknown>
-) => {
-  await handle.evaluate(
-    (window, { state }) => {
-      const mainStorage: Storage = window.mainStorage;
-      mainStorage.setState(state);
-    },
-    { state }
-  );
-};
-
-export const getMainStoreState = (
-  handle: JSHandle
-): Promise<Record<string, unknown>> => {
-  return handle.evaluate(window => window.mainStorage.state);
-};
-
-export const getLastDiff = (
-  handle: JSHandle
-): Promise<Diff<Record<string, unknown>> | undefined> => {
-  return handle.evaluate(window => window.lastDiff);
-};
-
-export const broadcast = async (handle: JSHandle, message: any) => {
-  await handle.evaluate(
-    (window, { message }) => {
-      window.broadcast(message);
-    },
-    { message }
-  );
-};
-
-export const getLastMessage = (handle: JSHandle): Promise<any> => {
-  return handle.evaluate(window => window.lastMessage);
-};
-
-export const block = () => {
-  let resolve!: () => void;
-  const p = new Promise<void>(r => {
-    resolve = r;
-  });
-  return [p, resolve] as const;
-};
-
-export const listenConsole = (page: Page, cb: (line: string) => void) => {
-  page.on("console", ev => {
-    ev.type() === "log" && cb(ev.text());
-  });
-};
-
-export const matchPrefix = (line: string, prefix: string) => {
-  if (line.startsWith(prefix)) return line.slice(prefix.length);
 };

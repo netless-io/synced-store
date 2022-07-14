@@ -2,6 +2,7 @@ import type { Room } from "white-web-sdk";
 import { DeviceType, WhiteWebSdk } from "white-web-sdk";
 import { genUID } from "side-effect-manager";
 import { SyncedStorePlugin } from "../src";
+import type { JoinRoomConfig } from "../e2e/typings";
 
 const whiteboard = new WhiteWebSdk({
   appIdentifier: import.meta.env.VITE_WHITEBOARD_ID,
@@ -16,15 +17,16 @@ async function main(): Promise<void> {
   const roomToken = localStorage.getItem("roomToken");
   const search = window.location.search;
   const url = new URLSearchParams(search);
-  const urlRoomUUID = url.get("uuid");
-  const urlRoomToken = url.get("roomToken");
+  const urlConfigParam = url.get("config") || null;
+  const urlConfig: JoinRoomConfig =
+    urlConfigParam && JSON.parse(decodeURIComponent(urlConfigParam));
 
   let room: Room;
-  if (urlRoomUUID && urlRoomToken) {
-    room = await joinRoom(urlRoomUUID, urlRoomToken);
+  if (urlConfig) {
+    room = await joinRoom(urlConfig);
   } else {
     room = await (roomUUID && roomToken
-      ? joinRoom(roomUUID, roomToken)
+      ? joinRoom({ uuid: roomUUID, token: roomToken })
       : createRoom());
   }
 
@@ -66,18 +68,23 @@ async function createRoom(): Promise<Room> {
   });
   localStorage.setItem("roomUUID", uuid);
   localStorage.setItem("roomToken", roomToken);
-  return joinRoom(uuid, roomToken);
+  return joinRoom({ uuid, token: roomToken });
 }
 
-async function joinRoom(roomUUID: string, roomToken: string): Promise<Room> {
+async function joinRoom({
+  uuid,
+  token,
+  isWritable,
+}: JoinRoomConfig): Promise<Room> {
   const uid = genUID();
   return whiteboard.joinRoom(
     {
-      uuid: roomUUID,
-      roomToken,
+      uuid,
+      roomToken: token,
       uid,
       invisiblePlugins: [SyncedStorePlugin],
       disableMagixEventDispatchLimit: true,
+      isWritable,
       userPayload: {
         uid,
         nickName: uid,
