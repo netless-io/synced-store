@@ -55,10 +55,11 @@ export class Refine<TState = any> {
     }
     const diff = {} as Diff<TState>;
     let hasDiff = false;
-    new Set([
+    const allKeys = new Set([
       ...plainObjectKeys(this.state),
       ...plainObjectKeys(state),
-    ]).forEach(key => {
+    ]);
+    allKeys.forEach(key => {
       const diffOne = this.setValue(key, state[key]);
       if (diffOne) {
         hasDiff = true;
