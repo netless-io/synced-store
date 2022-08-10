@@ -24,7 +24,7 @@ export const STORAGE_NS = "_WM-StOrAgE_";
 
 export const MAIN_STORAGE = "_WM-MaIn-StOrAgE_";
 
-export interface StorageEventData<TState = any> {
+export interface StorageEventData<TState> {
   stateChanged: Diff<TState>;
   disconnected: void;
 }
@@ -43,7 +43,7 @@ export class Storage<TState extends Record<string, any> = any> {
   private _isWritable$: StorageConfig["isWritable$"];
   private _refine: Refine<TState>;
   private _sideEffect = new SideEffectManager();
-  private _events = new Remitter<StorageEventData>();
+  private _events = new Remitter<StorageEventData<TState>>();
 
   public constructor({
     plugin$,
@@ -227,17 +227,17 @@ export class Storage<TState extends Record<string, any> = any> {
   /**
    * Add a listener to the eventName.
    */
-  public on: <TEventName extends RemitterEventNames<StorageEventData>>(
+  public on: <TEventName extends RemitterEventNames<StorageEventData<TState>>>(
     eventName: TEventName,
-    listener: RemitterListener<StorageEventData, TEventName>
+    listener: RemitterListener<StorageEventData<TState>, TEventName>
   ) => RemitterDisposer;
 
   /**
    * Remove a listener from the eventName.
    */
-  public off: <TEventName extends RemitterEventNames<StorageEventData>>(
+  public off: <TEventName extends RemitterEventNames<StorageEventData<TState>>>(
     eventName: TEventName,
-    listener: RemitterListener<StorageEventData, TEventName>
+    listener: RemitterListener<StorageEventData<TState>, TEventName>
   ) => boolean;
 
   /** Disconnect from synced storage and release listeners */
