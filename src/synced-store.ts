@@ -1,4 +1,4 @@
-import { SideEffectManager } from "side-effect-manager";
+import { SideEffectManager, genUID } from "side-effect-manager";
 import type { ReadonlyVal } from "value-enhancer";
 import { combine } from "value-enhancer";
 import type {
@@ -129,6 +129,27 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
       event,
       listener as WhiteEventListener
     );
+  }
+
+  public nextFrame(): Promise<void> {
+    return new Promise(resolve => {
+      if (isRoom(this.displayer)) {
+        const uid = genUID();
+        const channel = "SyncedStoreNextFrame";
+        const handler: WhiteEventListener = ev => {
+          if (ev.payload === uid) {
+            this.displayer.removeMagixEventListener(channel, handler);
+            resolve();
+          }
+        };
+        this.displayer.addMagixEventListener(channel, handler, {
+          fireSelfEventAfterCommit: true,
+        });
+        this.displayer.dispatchMagixEvent(channel, uid);
+      } else {
+        resolve();
+      }
+    });
   }
 
   public destroy(): void {

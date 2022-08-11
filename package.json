@@ -1,6 +1,6 @@
 {
   "name": "@netless/synced-store",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "A white-web-sdk plugin for storing shared replayable states and sending/receiving replayable events.",
   "author": "netless",
   "license": "MIT",
@@ -31,7 +31,7 @@
   "dependencies": {
     "lodash-es": "^4.17.21",
     "remitter": "^0.2.6",
-    "side-effect-manager": "^1.1.1",
+    "side-effect-manager": "^1.1.3",
     "value-enhancer": "^1.3.0"
   },
   "devDependencies": {
