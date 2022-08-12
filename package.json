@@ -1,6 +1,6 @@
 {
   "name": "@netless/synced-store",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "A white-web-sdk plugin for storing shared replayable states and sending/receiving replayable events.",
   "author": "netless",
   "license": "MIT",
@@ -12,7 +12,6 @@
     "dist"
   ],
   "scripts": {
-    "preinstall": "npx only-allow pnpm",
     "dev": "vite",
     "start": "vite",
     "prepublish": "pnpm run build",
