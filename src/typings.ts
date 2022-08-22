@@ -4,7 +4,7 @@ import type {
   MagixEventListenerOptions,
 } from "white-web-sdk";
 
-export type DiffOne<T> = { oldValue?: T; newValue?: T };
+export type DiffOne<T> = { oldValue?: T; newValue: T };
 
 export type Diff<T> = { [K in keyof T]?: DiffOne<T[K]> };
 

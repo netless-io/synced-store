@@ -91,7 +91,7 @@ export class Refine<TState = any> {
       if (has(this.state, key)) {
         const oldValue = this.deleteRefKey(key);
         delete this.state[key];
-        return { oldValue };
+        return { oldValue, newValue: undefined as unknown as TState[TKey] };
       }
     } else {
       const value = maybeRefValue as TState[TKey];
