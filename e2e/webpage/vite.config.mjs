@@ -2,7 +2,7 @@
 
 import path from "path";
 import { defineConfig } from "vite";
-import baseConfig from "../../vite.config";
+import baseConfig from "../../vite.config.mjs";
 
 export default defineConfig((...args) => {
   const config = baseConfig(...args);

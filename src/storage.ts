@@ -1,24 +1,26 @@
-import type { ReadonlyVal } from "value-enhancer";
-import type { AkkoObjectUpdatedListener, InvisiblePlugin } from "white-web-sdk";
-import {
-  listenUpdated,
-  reaction,
-  RoomPhase,
-  unlistenUpdated,
-  toJS,
-} from "white-web-sdk";
-import type { Diff } from "./typings";
-import { isObject, plainObjectKeys } from "./utils";
-import type { RefineState } from "./refine";
-import { Refine } from "./refine";
-import type { SideEffectDisposer } from "side-effect-manager";
-import { SideEffectManager } from "side-effect-manager";
 import type {
   RemitterDisposer,
   RemitterEventNames,
   RemitterListener,
 } from "remitter";
+import type { SideEffectDisposer } from "side-effect-manager";
+import type { ReadonlyVal } from "value-enhancer";
+import type { AkkoObjectUpdatedListener, InvisiblePlugin } from "white-web-sdk";
+import type { RefineState } from "./refine";
+import type { Diff } from "./typings";
+
 import { Remitter } from "remitter";
+import { SideEffectManager } from "side-effect-manager";
+import { subscribe } from "value-enhancer";
+import {
+  RoomPhase,
+  listenUpdated,
+  reaction,
+  toJS,
+  unlistenUpdated,
+} from "white-web-sdk";
+import { Refine } from "./refine";
+import { isObject, plainObjectKeys } from "./utils";
 
 export const STORAGE_NS = "_WM-StOrAgE_";
 
@@ -31,7 +33,7 @@ export interface StorageEventData<TState> {
 
 export interface StorageConfig<TState = any> {
   namespace?: string;
-  plugin$: ReadonlyVal<InvisiblePlugin<any> | null>;
+  plugin$: ReadonlyVal<InvisiblePlugin<any, any> | null>;
   isWritable$: ReadonlyVal<boolean>;
   defaultState?: TState;
 }
@@ -76,9 +78,9 @@ export class Storage<TState extends Record<string, any> = any> {
     };
 
     const ensureInitState = (
-      plugin: InvisiblePlugin<any>
+      plugin: InvisiblePlugin<any, any>
     ): SideEffectDisposer => {
-      return isWritable$.subscribe(isWritable => {
+      return subscribe(isWritable$, isWritable => {
         if (isWritable) {
           if (!isObject(plugin.attributes[STORAGE_NS])) {
             plugin.updateAttributes([STORAGE_NS], {});
@@ -143,7 +145,7 @@ export class Storage<TState extends Record<string, any> = any> {
     };
 
     const listenStorageChange = (
-      plugin: InvisiblePlugin<any>
+      plugin: InvisiblePlugin<any, any>
     ): SideEffectDisposer => {
       let disposer = listenNamespace();
 
@@ -162,7 +164,7 @@ export class Storage<TState extends Record<string, any> = any> {
     };
 
     this._sideEffect.addDisposer(
-      this._plugin$.subscribe(plugin => {
+      subscribe(this._plugin$, plugin => {
         const disposers: SideEffectDisposer[] = [];
         this._sideEffect.flush("plugin-init");
         if (plugin) {
@@ -245,7 +247,7 @@ export class Storage<TState extends Record<string, any> = any> {
     this._disconnected = true;
     this._sideEffect.flushAll();
     this._events.emit("disconnected");
-    this._events.destroy();
+    this._events.dispose();
   }
 
   public get disconnected(): boolean {
@@ -254,7 +256,7 @@ export class Storage<TState extends Record<string, any> = any> {
 
   private _disconnected = false;
 
-  private _requireAccess(method: string): InvisiblePlugin<any> {
+  private _requireAccess(method: string): InvisiblePlugin<any, any> {
     if (this._disconnected) {
       throw new Error(
         `Cannot call ${method} on destroyed Storage '${this.namespace}'.`

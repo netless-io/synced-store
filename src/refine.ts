@@ -1,5 +1,6 @@
-import { genUID } from "side-effect-manager";
 import type { Diff, DiffOne } from "./typings";
+
+import { genUID } from "side-effect-manager";
 import { has, isObject, plainObjectKeys } from "./utils";
 
 const REFINE_KEY = "__IsReFiNe";

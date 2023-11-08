@@ -1,9 +1,10 @@
-import { request } from "@playwright/test";
-import type { Page, Browser } from "@playwright/test";
-import { Remitter } from "remitter";
+import type { Browser, Page } from "@playwright/test";
 import type { RoomPhase } from "white-web-sdk";
 import type { Diff } from "../src/typings";
 import type { JoinRoomConfig } from "./typings";
+
+import { request } from "@playwright/test";
+import { Remitter } from "remitter";
 
 export interface TestingPageEventData {
   stateChanged: Diff<Record<string, any>>;
@@ -17,7 +18,10 @@ export class TestingPage {
   events = new Remitter();
   roomConfig?: { uuid: string; token: string };
 
-  constructor(public browser: Browser, public page: Page) {
+  constructor(
+    public browser: Browser,
+    public page: Page
+  ) {
     this.page.exposeFunction(
       "onStateChanged",
       (diff: TestingPageEventData["stateChanged"]) => {

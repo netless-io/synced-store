@@ -1,27 +1,28 @@
-import { Val } from "value-enhancer";
+import type { ReadonlyVal } from "value-enhancer";
 import type { Displayer, InvisiblePluginContext } from "white-web-sdk";
-import { RoomPhase } from "white-web-sdk";
-import { InvisiblePlugin, isRoom } from "white-web-sdk";
+
+import { setValue, subscribe, unsubscribe, val } from "value-enhancer";
+import { InvisiblePlugin, RoomPhase, isRoom } from "white-web-sdk";
 import { STORAGE_NS } from "./storage";
 import { SyncedStore } from "./synced-store";
 
-export class SyncedStorePlugin extends InvisiblePlugin<any> {
+export class SyncedStorePlugin extends InvisiblePlugin<any, any> {
   public static readonly kind: string = "SyncedStore";
   public static readonly invisiblePlugins = new Map<
     Displayer,
-    Val<InvisiblePlugin<any> | null>
+    ReadonlyVal<InvisiblePlugin<any, any> | null>
   >();
 
   public static async init<TEventData extends Record<string, any> = any>(
     displayer: Displayer
   ): Promise<SyncedStore<TEventData>> {
-    const isRoomWritable$ = new Val(false);
+    const isRoomWritable$ = val(false);
     const updateRoomWritable = () =>
-      isRoomWritable$.setValue(isRoom(displayer) && displayer.isWritable);
+      setValue(isRoomWritable$, isRoom(displayer) && displayer.isWritable);
     updateRoomWritable();
     displayer.callbacks.on("onEnableWriteNowChanged", updateRoomWritable);
 
-    const invisiblePlugin$ = new Val<InvisiblePlugin<any> | null>(
+    const invisiblePlugin$ = val<InvisiblePlugin<any, any> | null>(
       displayer.getInvisiblePlugin(SyncedStorePlugin.kind)
     );
     SyncedStorePlugin.invisiblePlugins.set(displayer, invisiblePlugin$);
@@ -35,8 +36,8 @@ export class SyncedStorePlugin extends InvisiblePlugin<any> {
             SyncedStorePlugin,
             { [STORAGE_NS]: {} }
           );
-          invisiblePlugin$.setValue(plugin);
-          isRoomWritable$.unsubscribe(createSyncedStore);
+          setValue(invisiblePlugin$, plugin);
+          unsubscribe(isRoomWritable$, createSyncedStore);
         } catch (e) {
           // could be error if multiple users create plugin at the same time
           await new Promise(resolve => setTimeout(resolve, 200));
@@ -49,14 +50,14 @@ export class SyncedStorePlugin extends InvisiblePlugin<any> {
 
     const removeWritableListener = (plugin: SyncedStorePlugin | null): void => {
       if (plugin) {
-        isRoomWritable$.unsubscribe(createSyncedStore);
-        invisiblePlugin$.unsubscribe(removeWritableListener);
+        unsubscribe(isRoomWritable$, createSyncedStore);
+        unsubscribe(invisiblePlugin$, removeWritableListener);
       }
     };
 
     if (!invisiblePlugin$.value && isRoom(displayer)) {
-      isRoomWritable$.subscribe(createSyncedStore);
-      invisiblePlugin$.subscribe(removeWritableListener);
+      subscribe(isRoomWritable$, createSyncedStore);
+      subscribe(invisiblePlugin$, removeWritableListener);
     }
 
     const syncedStore = new SyncedStore(
@@ -69,8 +70,8 @@ export class SyncedStorePlugin extends InvisiblePlugin<any> {
       if (phase === RoomPhase.Disconnected) {
         displayer.callbacks.off("onPhaseChanged", onPhaseChanged);
         displayer.callbacks.off("onEnableWriteNowChanged", updateRoomWritable);
-        isRoomWritable$.destroy();
-        invisiblePlugin$.destroy();
+        isRoomWritable$.dispose();
+        invisiblePlugin$.dispose();
         SyncedStorePlugin.invisiblePlugins.delete(displayer);
       }
     };
@@ -80,11 +81,17 @@ export class SyncedStorePlugin extends InvisiblePlugin<any> {
   }
 
   public static onCreate(plugin: SyncedStorePlugin): void {
-    SyncedStorePlugin.invisiblePlugins.get(plugin.displayer)?.setValue(plugin);
+    const invisiblePlugin$ = SyncedStorePlugin.invisiblePlugins.get(
+      plugin.displayer
+    );
+    invisiblePlugin$ && setValue(invisiblePlugin$, plugin);
   }
 
   public constructor(context: InvisiblePluginContext) {
     super(context);
-    SyncedStorePlugin.invisiblePlugins.get(this.displayer)?.setValue(this);
+    const invisiblePlugin$ = SyncedStorePlugin.invisiblePlugins.get(
+      this.displayer
+    );
+    invisiblePlugin$ && setValue(invisiblePlugin$, this);
   }
 }

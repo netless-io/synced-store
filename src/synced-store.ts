@@ -1,24 +1,25 @@
-import { SideEffectManager, genUID } from "side-effect-manager";
 import type { ReadonlyVal } from "value-enhancer";
-import { combine } from "value-enhancer";
 import type {
-  EventListener as WhiteEventListener,
-  MagixEventListenerOptions,
-  Room,
   Displayer,
   InvisiblePlugin,
+  MagixEventListenerOptions,
+  Room,
+  EventListener as WhiteEventListener,
 } from "white-web-sdk";
-import { isRoom } from "white-web-sdk";
-import { Storage } from "./storage";
 import type {
-  MagixEventTypes,
   MagixEventHandler,
   MagixEventListenerDisposer,
+  MagixEventTypes,
 } from "./typings";
+
+import { SideEffectManager, genUID } from "side-effect-manager";
+import { combine, reaction } from "value-enhancer";
+import { isRoom } from "white-web-sdk";
+import { Storage } from "./storage";
 
 export class SyncedStore<TEventData extends Record<string, any> = any> {
   public readonly displayer: Displayer;
-  public readonly _plugin$: ReadonlyVal<InvisiblePlugin<any> | null>;
+  public readonly _plugin$: ReadonlyVal<InvisiblePlugin<any, any> | null>;
 
   private readonly _isPluginWritable$: ReadonlyVal<boolean>;
   private readonly _isRoomWritable$: ReadonlyVal<boolean>;
@@ -27,7 +28,7 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
 
   public constructor(
     displayer: Displayer,
-    invisiblePlugin$: ReadonlyVal<InvisiblePlugin<any> | null>,
+    invisiblePlugin$: ReadonlyVal<InvisiblePlugin<any, any> | null>,
     isRoomWritable$: ReadonlyVal<boolean>
   ) {
     this.displayer = displayer;
@@ -71,7 +72,7 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
   public addPluginWritableChangeListener(
     listener: (isWritable: boolean) => void
   ): () => void {
-    return this._isPluginWritable$.reaction(listener);
+    return reaction(this._isPluginWritable$, listener);
   }
 
   public get isRoomWritable(): boolean {
@@ -88,12 +89,12 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
   public addRoomWritableChangeListener(
     listener: (isWritable: boolean) => void
   ): () => void {
-    return this._isRoomWritable$.reaction(listener);
+    return reaction(this._isRoomWritable$, listener);
   }
 
   /** Dispatch events to other clients (and self). */
   public dispatchEvent<
-    TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
+    TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>,
   >(event: TEvent, payload: TEventData[TEvent]): void {
     if (!this._room) {
       throw new Error("[SyncedStore] cannot dispatch event in replay mode");
@@ -103,7 +104,7 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
 
   /** Listen to events from others clients (and self messages). */
   public addEventListener<
-    TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
+    TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>,
   >(
     event: TEvent,
     listener: MagixEventHandler<TEventData, TEvent>,
@@ -123,7 +124,7 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
 
   /** Remove a Magix event listener. */
   public removeEventListener<
-    TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
+    TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>,
   >(event: TEvent, listener?: MagixEventHandler<TEventData, TEvent>): void {
     return this.displayer.removeMagixEventListener(
       event,
@@ -131,6 +132,7 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
     );
   }
 
+  /** Wait for all sync operations being pushed to server. */
   public nextFrame(): Promise<void> {
     return new Promise(resolve => {
       if (isRoom(this.displayer)) {
@@ -145,15 +147,26 @@ export class SyncedStore<TEventData extends Record<string, any> = any> {
         this.displayer.addMagixEventListener(channel, handler, {
           fireSelfEventAfterCommit: true,
         });
-        this.displayer.dispatchMagixEvent(channel, uid);
+        try {
+          this.displayer.dispatchMagixEvent(channel, uid);
+        } catch (error) {
+          console.warn(error);
+          this.displayer.removeMagixEventListener(channel, handler);
+          resolve();
+        }
       } else {
         resolve();
       }
     });
   }
 
+  /** @deprecated Use `dispose()` instead. */
   public destroy(): void {
+    this.dispose();
+  }
+
+  public dispose(): void {
     this._sideEffect.flushAll();
-    this._isPluginWritable$.destroy();
+    this._isPluginWritable$.dispose();
   }
 }

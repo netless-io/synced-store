@@ -10,7 +10,7 @@ export type Diff<T> = { [K in keyof T]?: DiffOne<T[K]> };
 
 export interface MagixEventMessage<
   TEventData = any,
-  TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
+  TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>,
 > {
   /** Event name */
   event: TEvent;
@@ -28,7 +28,7 @@ export type MagixEventTypes<TEventData = any> = Extract<
 >;
 
 export type MagixEventDispatcher<TEventData = any> = <
-  TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
+  TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>,
 >(
   event: TEvent,
   payload: TEventData[TEvent]
@@ -36,13 +36,13 @@ export type MagixEventDispatcher<TEventData = any> = <
 
 export type MagixEventHandler<
   TEventData = any,
-  TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
+  TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>,
 > = (message: MagixEventMessage<TEventData, TEvent>) => void;
 
 export type MagixEventListenerDisposer = () => void;
 
 export type MagixEventAddListener<TEventData = any> = <
-  TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
+  TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>,
 >(
   event: TEvent,
   handler: MagixEventHandler<TEventData, TEvent>,
@@ -50,7 +50,7 @@ export type MagixEventAddListener<TEventData = any> = <
 ) => MagixEventListenerDisposer;
 
 export type MagixEventRemoveListener<TEventData = any> = <
-  TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>
+  TEvent extends MagixEventTypes<TEventData> = MagixEventTypes<TEventData>,
 >(
   event: TEvent,
   handler?: MagixEventHandler<TEventData, TEvent>
