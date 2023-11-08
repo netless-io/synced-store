@@ -231,17 +231,21 @@ pnpm t
   });
   ```
 
-- **Storage.on("destroyed", listener)**
+- **Storage.on("disconnected", listener)**
 
-  An event that fires after the storage instance is destroyed.
+  An event that fires after the storage instance is disconnected.
 
   Returns: `() => void` - A disposable function that can be called to remove the listener.
 
   ```js
-  const disposer = storage.on("destroyed", () => {
-    console.log(storage.destroyed); // true
+  const disposer = storage.on("disconnected", () => {
+    console.log(storage.disconnected); // true
   });
   ```
+
+- **Stoarge.disconnect()**
+
+  Disconnect or dispose the storage, triggers `disconnected` event, and release all listeners.
 
 ### License
 

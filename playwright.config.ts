@@ -9,7 +9,7 @@ const config: PlaywrightTestConfig = {
   retries: process.env.CI ? 2 : 0,
   use: {
     trace: "on-first-retry",
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:5173",
     headless: true,
   },
   timeout: 5 * 60 * 1000,
