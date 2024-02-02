@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.0.8](https://github.com/netless-io/synced-store/compare/v2.0.2...v2.0.8) (2024-02-02)
+
+
+### Bug Fixes
+
+* compatible with babel ([bbd744f](https://github.com/netless-io/synced-store/commit/bbd744fcee4c4b67b05a2a73422b47ddbbe7d0ee))
+
 ### [2.0.7](https://github.com/crimx/synced-store/compare/v2.0.2...v2.0.7) (2022-08-22)
 
 
