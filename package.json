@@ -4,8 +4,8 @@
   "description": "A white-web-sdk plugin for storing shared replayable states and sending/receiving replayable events.",
   "author": "netless",
   "license": "MIT",
-  "main": "./dist/synced-store.cjs.js",
-  "module": "./dist/synced-store.es.js",
+  "main": "./dist/synced-store.js",
+  "module": "./dist/synced-store.mjs",
   "types": "./dist/index.d.ts",
   "files": [
     "src",
