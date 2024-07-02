@@ -14,7 +14,7 @@ test("Reconnection", async ({ page, browser }) => {
   let page2Diff;
 
   page1.events.on("stateChanged", diff => (page1Diff = diff));
-  page2.events.on("stateChanged", diff => (page1Diff = diff));
+  page2.events.on("stateChanged", diff => (page2Diff = diff));
 
   await page2.page.context().setOffline(true);
   await page2.waitForNextEvent(
